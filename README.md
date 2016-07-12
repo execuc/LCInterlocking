@@ -35,6 +35,5 @@ Some details are not correctly drawn with Inkscape (i.e. "circle) in contrary to
 
 TODO
 ----
- * Test with newer version of FreeCAD.
  * Add tolerance parameter.
  * ...
