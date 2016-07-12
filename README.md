@@ -1,7 +1,7 @@
 LCInterlocking
 ==========
 
-Experimental module for FreeCAD 0.14.
+Experimental module for FreeCAD 0.16.
 It is not reliable, you have to check parts before doing the laser cut, don't trust it !
 
 Video demonstration : https://youtu.be/YGFIdLpdWXE
