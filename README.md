@@ -24,6 +24,9 @@ Then, select face(s), kind of join (tab, T-slot or continuous) and click on "Add
 faces" is used to share same tab properties between selected faces.
 Click on preview to view result on an other document. Click OK to create new parts in the current document.
 
+02-08-2016 : a new tool has been added called "crosspiece". Simply select the parts that intersect at 90 degree to
+create a crosspiece.
+
 SVG export
 --------------------
 Parts to be exported have to be selected before clicking to this feature. A new document is created with copied parts
@@ -35,5 +38,5 @@ Some details are not correctly drawn with Inkscape (i.e. "circle) in contrary to
 
 TODO
 ----
- * Add tolerance parameter.
+ * Add new interlocking.
  * ...

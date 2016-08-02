@@ -29,44 +29,6 @@ from panel.tab import TabProperties
 import helper
 
 
-def assemble_list_element(el_list):
-    if len(el_list) == 0:
-        return None
-
-    part = el_list[0]
-    for el in el_list[1:]:
-        part = part.fuse(el)
-
-    return part
-
-
-class MaterialElement:
-    def __init__(self, properties):
-        self.properties = properties
-        self.toAdd = []
-        self.toRemove = []
-
-    def reset_add_remove(self):
-        self.toAdd = []
-        self.toRemove = []
-
-    def get_name(self):
-        return self.properties.freecad_object.Name
-
-    def get_new_name(self):
-        return self.properties.new_name
-
-    def get_shape(self):
-        part = assemble_list_element(self.toAdd)
-        new_shape = self.properties.freecad_object.Shape
-        if part is not None:
-            new_shape = new_shape.fuse(part)
-        part = assemble_list_element(self.toRemove)
-        if part is not None:
-            new_shape = new_shape.cut(part)
-        return new_shape
-
-
 def get_slot_positions(tab_properties):
     slots_list = []
     interval_length = tab_properties.y_length / float(tab_properties.tabs_number)
@@ -258,7 +220,7 @@ def make_tab_join(tab, tab_part, other_parts):
             if intersect_test:
                 tab_part.toAdd.append(tab_to_add_transformed)
                 hole = tab_join_create_hole_on_plane(tab, tab.tabs_width, y, tab_part.properties,
-                                                       part_interactor.properties, True, True, True, tab.dog_bone)
+                                                       part_interactor.properties, True, True, tab.dog_bone)
                 transformed_hole = transform_part(hole, tab, part_interactor.properties)
                 part_interactor.toRemove.append(transformed_hole)
                 break
@@ -283,8 +245,7 @@ def make_continuous_tab_joins(tab, tab_part, other_parts):
                 if intersect_test:
                     tab_part.toAdd.append(tab_to_add_transformed)
                     hole = tab_join_create_hole_on_plane(tab, virtual_tab_length, y_pos_center, tab_part.properties,
-                                                         part_interactor.properties, left_kerf, right_kerf,
-                                                         True, tab.dog_bone)
+                                                         part_interactor.properties, left_kerf, right_kerf, tab.dog_bone)
                     transformed_hole = transform_part(hole, tab, part_interactor.properties)
                     part_interactor.toRemove.append(transformed_hole)
                     break
@@ -314,10 +275,10 @@ def make_tslot_tab_join(tab, tab_part, other_parts):
 
                 left_hole = tab_join_create_hole_on_plane(tab, tab.tabs_width, y - half_tab_distance,
                                                           tab_part.properties, part_interactor.properties,
-                                                          True, True, True, tab.dog_bone)
+                                                          True, True, tab.dog_bone)
                 right_hole = tab_join_create_hole_on_plane(tab, tab.tabs_width, y + half_tab_distance,
                                                           tab_part.properties, part_interactor.properties,
-                                                          True, True, True, tab.dog_bone)
+                                                          True, True, tab.dog_bone)
 
                 part_interactor.toRemove.append(transform_part(left_hole, tab,
                                                                part_interactor.properties))
@@ -340,7 +301,7 @@ def make_tslot_tab_join(tab, tab_part, other_parts):
 def make_tabs_joins(parts, tabs):
     parts_element = []
     for part in parts:
-        mat_element = MaterialElement(part)
+        mat_element = helper.MaterialElement(part)
         parts_element.append(mat_element)
 
     for tab in tabs:
@@ -460,8 +421,8 @@ def check_limit_z(tab_face, width, pos_y, material_face, material_plane):
 #     return tab
 
 
-def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, material_plane, left_kerf=True, right_kerf=True,
-                                  use_mat_tol=True, dog_bone=False):
+def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, material_plane,
+                                  left_kerf=True, right_kerf=True, dog_bone=False):
 
     z_plus_inside, z_minus_inside = check_limit_z(tab_face, width, pos_y, material_face, material_plane)
     #print("z_plus_inside %r, z_minus_inside %r" % (z_plus_inside, z_minus_inside))
@@ -469,15 +430,16 @@ def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, materia
 
     corrected_width = width  # - materialPlane.laser_beam_diameter
     corrected_width_center = corrected_width / 2.0
+    width_to_remove = material_plane.laser_beam_diameter + material_plane.hole_width_tolerance
     if left_kerf and right_kerf:
-        corrected_width -= material_plane.laser_beam_diameter
+        corrected_width -= width_to_remove
         corrected_width_center = corrected_width / 2.0
     elif left_kerf:
-        corrected_width -= material_plane.laser_beam_diameter / 2.0
-        corrected_width_center = (corrected_width - material_plane.laser_beam_diameter / 2.0) / 2.0
+        corrected_width -= width_to_remove / 2.0
+        corrected_width_center = (corrected_width - width_to_remove / 2.0) / 2.0
     elif right_kerf:
-        corrected_width -= material_plane.laser_beam_diameter / 2.0
-        corrected_width_center = (corrected_width + material_plane.laser_beam_diameter / 2.0) / 2.0
+        corrected_width -= width_to_remove / 2.0
+        corrected_width_center = (corrected_width + width_to_remove / 2.0) / 2.0
 
     corrected_height = material_face.thickness + material_face.thickness_tolerance #- material_plane.laser_beam_diameter
     corrected_height_center = corrected_height /2.0

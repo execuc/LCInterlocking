@@ -179,11 +179,22 @@ def sort_quad_vertex(list_edges, reverse):
 def get_value(item):
     return item[1]
 
+def biggest_area_faces(freecad_shape):
+    sorted_list = sort_area_faces(freecad_shape)
+    biggest_area_face = sorted_list[-1]
+#       contains : 0:normal, 1:area mm2, 2; list of faces
+    return biggest_area_face
+
+def smallest_area_faces(freecad_shape):
+    sorted_list = sort_area_faces(freecad_shape)
+    smallest_area_face = sorted_list[0]
+#       contains : 0:normal, 1:area mm2, 2; list of faces
+    return smallest_area_face
 
 #   Returns face grouping by normal,sorted by the amount of surface (descending)
-def biggest_area_faces(freecad_object):
+def sort_area_faces(shape):
     normal_area_list = []
-    for face in freecad_object.Shape.Faces:
+    for face in shape.Faces:
         # print face
         normal = face.normalAt(0, 0)
         # print normal
@@ -199,7 +210,42 @@ def biggest_area_faces(freecad_object):
             normal_area_list.append([normal, face.Area, [face]])
     # print normal_area_list
     sorted_list = sorted(normal_area_list, key=get_value)
-    # print sorted_list
-    biggest_area_face = sorted_list[-1]
-#       contains : 0:normal, 1:area mm2, 2; list of faces
-    return biggest_area_face
+    return sorted_list
+
+
+def assemble_list_element(el_list):
+    if len(el_list) == 0:
+        return None
+
+    part = el_list[0]
+    for el in el_list[1:]:
+        part = part.fuse(el)
+
+    return part
+
+
+class MaterialElement:
+    def __init__(self, properties):
+        self.properties = properties
+        self.toAdd = []
+        self.toRemove = []
+
+    def reset_add_remove(self):
+        self.toAdd = []
+        self.toRemove = []
+
+    def get_name(self):
+        return self.properties.freecad_object.Name
+
+    def get_new_name(self):
+        return self.properties.new_name
+
+    def get_shape(self):
+        part = assemble_list_element(self.toAdd)
+        new_shape = self.properties.freecad_object.Shape
+        if part is not None:
+            new_shape = new_shape.fuse(part)
+        part = assemble_list_element(self.toRemove)
+        if part is not None:
+            new_shape = new_shape.cut(part)
+        return new_shape

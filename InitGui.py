@@ -55,8 +55,8 @@ static char * laser_xpm[] = {
  
     def Initialize(self):
         import ExportPanel
-        from panel import multiplejoins
-        cmd_list = ["multiple_tabs_command", "export_command"]  # A list of command names created in the line above
+        from panel import multiplejoins, crosspiece
+        cmd_list = ["multiple_tabs_command", "export_crosspiece", "export_command"]  # A list of command names created in the line above
         self.appendToolbar("Laser Cut Commands", cmd_list)  # creates a new toolbar with your commands
  
     def Activated(self):

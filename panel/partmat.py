@@ -40,7 +40,9 @@ class Part(ParamWidget):
         self.widget_list.extend([WidgetValue(type=str, name="new_name", show_name="New part name", widget=None),
                                  WidgetValue(type=float, name="thickness", show_name="Thickness", widget=None,
                                              interval_value=[0.5, 3000.], decimals=2, step=0.5),
-                                 WidgetValue(type=float, name="thickness_tolerance", show_name="Thickness Tolerance",
+                                 WidgetValue(type=float, name="thickness_tolerance", show_name="Thickness tolerance",
+                                             widget=None, interval_value=[0., 30.], decimals=4, step=0.05),
+                                 WidgetValue(type=float, name="hole_width_tolerance", show_name="Hole width tolerance",
                                              widget=None, interval_value=[0., 30.], decimals=4, step=0.05),
                                  WidgetValue(type=float, name="laser_beam_diameter", show_name="Laser beam diameter",
                                              widget=None, interval_value=[0., 30.], decimals=4, step=0.05)])

@@ -48,7 +48,7 @@ def get_freecad_object():
 def transform_shape(part_feature, new_part_feature, freecad_document):
     new_part_feature.Shape = part_feature.Shape
     freecad_document.recompute()
-    normal_face_prop = biggest_area_faces(part_feature)
+    normal_face_prop = biggest_area_faces(part_feature.Shape)
     normal_ref = normal_face_prop[0]
     rotation_to_apply = FreeCAD.Rotation(normal_ref, FreeCAD.Vector(0, 0, 1))
     current_rotation = new_part_feature.Placement.Rotation

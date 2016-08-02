@@ -31,7 +31,7 @@ from helper import ObjectProperties, sort_quad_vertex, biggest_area_faces
 
 class MaterialProperties(ObjectProperties):
 
-    _allowed = ('type', 'thickness', 'thickness_tolerance', 'laser_beam_diameter', 'freecad_object')
+    _allowed = ('type', 'thickness', 'thickness_tolerance', 'hole_width_tolerance', 'laser_beam_diameter', 'freecad_object')
     TYPE_LASER_CUT = 1
 
     def __init__(self, **kwargs):
@@ -53,6 +53,8 @@ class MaterialProperties(ObjectProperties):
             self.laser_beam_diameter = self.thickness / 15.0
         if not hasattr(self, 'new_name'):
             self.new_name = "%s_tab" % self.freecad_object.Label
+        if not hasattr(self, 'hole_width_tolerance'):
+            self.hole_width_tolerance = 0.0
 
 
 # Prendre la normal la plus présente en terme de surface (biggest_area_faces)
@@ -66,7 +68,7 @@ def retrieve_thickness_from_bounded_box():
 # Pour chaque face recupere les points et calcule la plus petite distance entre chaque point
 # de la premiere face et ceux de la deuxième face. La distance la plus petite est l'éppaisseur estimé.
 def retrieve_thickness_from_biggest_face(freecad_object):
-    area_faces = biggest_area_faces(freecad_object)
+    area_faces = biggest_area_faces(freecad_object.Shape)
     list_edges_face1 = Part.__sortEdges__(area_faces[2][0].Edges)
     list_edges_face2 = Part.__sortEdges__(area_faces[2][1].Edges)
 

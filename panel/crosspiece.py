@@ -23,20 +23,22 @@
 # *                                                                         *
 # ***************************************************************************
 
-import FreeCAD
-import FreeCADGui
 from FreeCAD import Gui
+import FreeCADGui
+import FreeCAD
+from PySide import QtCore, QtGui
 import os
-from lasercut.join import make_tabs_joins
+
 from treepanel import TreePanel
+from lasercut.crosspart import make_cross_parts
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, '../icons')
 
+class CrossPiece(TreePanel):
 
-class MultipleJoins(TreePanel):
     def __init__(self):
-        super(MultipleJoins, self).__init__("Parts and tabs")
+        super(CrossPiece, self).__init__("Crosspiece")
 
     def accept(self):
         try:
@@ -54,10 +56,9 @@ class MultipleJoins(TreePanel):
     def compute_parts(self):
         self.save_items_properties()
         parts = self.partsList.get_parts_properties()
-        tabs = self.tabsList.get_tabs_properties()
-        if len(parts) == 0 or len(tabs) == 0:
+        if len(parts) == 0:
             raise ValueError("No pars or tabs defined")
-        return make_tabs_joins(parts, tabs)
+        return make_cross_parts(parts)
 
     def preview(self):
         FreeCAD.Console.PrintMessage("Preview Button\n")
@@ -79,23 +80,49 @@ class MultipleJoins(TreePanel):
         FreeCADGui.getDocument(self.preview_doc.Label).ActiveView.fitAll()
         return
 
+    def init_tree_widget(self):
+        # Add part buttons
+        h_box = QtGui.QHBoxLayout(self.tree_widget)
+        add_parts_button = QtGui.QPushButton('Add parts', self.tree_widget)
+        add_parts_button.clicked.connect(self.add_parts)
+        add_same_part_button = QtGui.QPushButton('Add same parts', self.tree_widget)
+        add_same_part_button.clicked.connect(self.add_same_parts)
+        h_box.addWidget(add_parts_button)
+        h_box.addWidget(add_same_part_button)
+        self.tree_vbox.addLayout(h_box)
+        # tree
+        self.selection_model = self.tree_view_widget.selectionModel()
+        self.selection_model.selectionChanged.connect(self.selection_changed)
+        self.tree_vbox.addWidget(self.tree_view_widget)
+        remove_item_button = QtGui.QPushButton('Remove item', self.tree_widget)
+        remove_item_button.clicked.connect(self.remove_items)
+        self.tree_vbox.addWidget(remove_item_button)
+        # test layout
+        self.edit_items_layout = QtGui.QVBoxLayout(self.tree_widget)
+        self.tree_vbox.addLayout(self.edit_items_layout)
 
-class MultipleCommand:
+
+
+class CrossPieceCommand:
 
     def __init__(self):
         return
 
     def GetResources(self):
-        return {'Pixmap': os.path.join(iconPath, 'one_tab.xpm'),  # the name of a svg file available in the resources
-                'MenuText': "Slots",
-                'ToolTip': "Slots"}
+        return {'Pixmap': os.path.join(iconPath, 'crosspiece.xpm'),  # the name of a svg file available in the resources
+                'MenuText': "Crosspiece",
+                'ToolTip': "Crosspiece"}
 
     def IsActive(self):
+        #return len(FreeCADGui.Selection.getSelection()) > 0
         return True
 
     def Activated(self):
-        panel = MultipleJoins()
+        panel = CrossPiece()
         FreeCADGui.Control.showDialog(panel)
         return
 
-Gui.addCommand('multiple_tabs_command', MultipleCommand())
+
+
+
+Gui.addCommand('export_crosspiece', CrossPieceCommand())
