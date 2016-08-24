@@ -85,6 +85,18 @@ class TabContinuousWidget(BaseTabWidget):
                             WidgetValue(type=bool, name="y_invert", show_name="Invert Y", widget=None),
                             WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None)]
 
+
+class TabFlexWidget(BaseTabWidget):
+
+    def __init__(self, cad_face, cad_object, name, t_type):
+        BaseTabWidget.__init__(self, cad_face, cad_object, name, t_type)
+
+        self.widget_list = [WidgetValue(type=float, name="tabs_width", show_name="Width of tabs", widget=None,
+                                            interval_value=[1., 300.], step=1., decimals=2),
+                            WidgetValue(type=bool, name="y_invert", show_name="Invert Y", widget=None),
+                            WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None)]
+
+
 class TabLink(ParamWidget):
 
     def __init__(self, cad_face, cad_object, name, tab_link):
@@ -127,6 +139,8 @@ class TabsList(object):
                 tab = TSlotWidget(freecad_face, freecad_object, name, tab_type)
             elif tab_type == TabProperties.TYPE_CONTINUOUS:
                 tab = TabContinuousWidget(freecad_face, freecad_object, name, tab_type)
+            elif tab_type == TabProperties.TYPE_FLEX:
+                tab = TabFlexWidget(freecad_face, freecad_object, name, tab_type)
             else:
                 raise ValueError(name + " unkonwn type of tab")
             self.tabs_list.append(tab)
@@ -187,6 +201,9 @@ class TabsList(object):
                 linked_properties.name = tab.properties().name
                 linked_properties.real_name = tab.properties().real_name
                 linked_properties.y_invert = tab.properties().y_invert
+                linked_properties.transform_matrix = tab.properties().transform_matrix
+                linked_properties.thickness = tab.properties().thickness
+                linked_properties.y_length = tab.properties().y_length
                 tabs_properties.append(linked_properties)
             else:
                 tabs_properties.append(tab.properties())

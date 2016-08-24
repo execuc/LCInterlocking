@@ -26,6 +26,7 @@ Click on preview to view result on an other document. Click OK to create new par
 
 02-08-2016 : a new tool has been added called "crosspiece". Simply select the parts that intersect at 90 degree to
 create a crosspiece.
+21-08-2016 : add flexible interlocking.
 
 SVG export
 --------------------
@@ -39,4 +40,5 @@ Some details are not correctly drawn with Inkscape (i.e. "circle) in contrary to
 TODO
 ----
  * Add new interlocking.
+ * Create curved surfaces.
  * ...

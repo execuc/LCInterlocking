@@ -76,7 +76,8 @@ class MultipleJoins(TreePanel):
                 self.preview_doc.removeObject(obj.Name)
 
         self.create_new_parts(self.preview_doc, computed_parts)
-        FreeCADGui.getDocument(self.preview_doc.Label).ActiveView.fitAll()
+        if not preview_doc_exist :
+            FreeCADGui.getDocument(self.preview_doc.Label).ActiveView.fitAll()
         return
 
 

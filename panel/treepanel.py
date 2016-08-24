@@ -28,7 +28,7 @@ import FreeCADGui
 from FreeCAD import Gui
 import os, copy
 from PySide import QtCore, QtGui
-from partmat import PartsList
+from partmat import PartsList, CrossPartWidget
 from tab import TabsList
 from panel import selection
 from lasercut.tabproperties import TabProperties
@@ -40,7 +40,10 @@ class TreePanel(object):
 
     def __init__(self, title):
         self.form = []
-        self.partsList = PartsList()
+        if title != "Crosspiece":
+            self.partsList = PartsList()
+        else:
+            self.partsList = PartsList(CrossPartWidget)
         self.tabsList = TabsList()
         self.params_widget = QtGui.QWidget()
         self.params_widget.setObjectName("ParamsPanel")
@@ -68,7 +71,7 @@ class TreePanel(object):
         self.edit_items_layout = None
         self.init_tree_widget()
         self.preview_doc = None
-        self._preview_button = None
+        #self._preview_button = None
         self.show_other_state_checkbox = None
         self.other_object_list = []
         self.save_initial_objects()
@@ -96,7 +99,8 @@ class TreePanel(object):
         # Add faces buttons
         h_box = QtGui.QHBoxLayout(self.tree_widget)
         self.tab_type_box = QtGui.QComboBox(self.tree_widget)
-        self.tab_type_box.addItems([TabProperties.TYPE_TAB, TabProperties.TYPE_T_SLOT, TabProperties.TYPE_CONTINUOUS])
+        self.tab_type_box.addItems([TabProperties.TYPE_TAB, TabProperties.TYPE_T_SLOT,
+                                    TabProperties.TYPE_CONTINUOUS, TabProperties.TYPE_FLEX])
         h_box.addWidget(self.tab_type_box)
         add_faces_button = QtGui.QPushButton('Add faces', self.tree_widget)
         add_faces_button.clicked.connect(self.add_tabs)

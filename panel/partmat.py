@@ -42,10 +42,28 @@ class Part(ParamWidget):
                                              interval_value=[0.5, 3000.], decimals=2, step=0.5),
                                  WidgetValue(type=float, name="thickness_tolerance", show_name="Thickness tolerance",
                                              widget=None, interval_value=[0., 30.], decimals=4, step=0.05),
-                                 WidgetValue(type=float, name="hole_width_tolerance", show_name="Hole width tolerance",
+                                 WidgetValue(type=float, name="hole_width_tolerance", show_name="Slot width tolerance",
                                              widget=None, interval_value=[0., 30.], decimals=4, step=0.05),
                                  WidgetValue(type=float, name="laser_beam_diameter", show_name="Laser beam diameter",
                                              widget=None, interval_value=[0., 30.], decimals=4, step=0.05)])
+
+
+class CrossPartWidget(Part):
+
+    def __init__(self, cad_object):
+        Part.__init__(self, cad_object)
+        self.widget_list.extend([WidgetValue(type=list, name="node_type", show_name="Node type", widget=None,
+                                             interval_value=[MaterialProperties.NODE_NO,
+                                                             MaterialProperties.NODE_SINGLE_SHORT,
+                                                             MaterialProperties.NODE_SINGLE_LONG,
+                                                             MaterialProperties.NODE_DUAL_SHORT]),
+                                 WidgetValue(type=float, name="node_thickness", show_name="Node thickness",
+                                             widget=None, interval_value=[0., 30.], decimals=4, step=0.05,
+                                             parent_name="node_type",
+                                             parent_value=[MaterialProperties.NODE_SINGLE_SHORT,
+                                                           MaterialProperties.NODE_SINGLE_LONG,
+                                                           MaterialProperties.NODE_DUAL_SHORT]),
+                                 WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None)])
 
 
 class PartLink(ParamWidget):
@@ -73,15 +91,16 @@ class PartLink(ParamWidget):
 
 class PartsList(object):
 
-    def __init__(self):
+    def __init__(self, object_type=Part):
         self.part_list = []
+        self.object_type = object_type
         return
 
     def append(self, freecad_object):
         if self.exist(freecad_object.Name):
             raise ValueError(freecad_object.Name + " already in interactor parts list")
         else:
-            self.part_list.append(Part(freecad_object))
+            self.part_list.append(self.object_type(freecad_object))
         return self.part_list[-1]
 
     def append_link(self, freecad_object, freecad_object_src):
@@ -92,6 +111,10 @@ class PartsList(object):
             if src_part_element is None:
                 raise ValueError("No original part found")
             self.part_list.append(PartLink(freecad_object, src_part_element))
+            if self.part_list[-1].properties().thickness != src_part_element.properties().thickness:
+                del self.part_list[-1]
+                raise ValueError(freecad_object.Name + " does not have the same thickness")
+
         return self.part_list[-1]
 
     def remove(self, name):

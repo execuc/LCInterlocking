@@ -55,9 +55,16 @@ static char * laser_xpm[] = {
  
     def Initialize(self):
         import ExportPanel
+        import MakeBoxPanel
         from panel import multiplejoins, crosspiece
-        cmd_list = ["multiple_tabs_command", "export_crosspiece", "export_command"]  # A list of command names created in the line above
-        self.appendToolbar("Laser Cut Commands", cmd_list)  # creates a new toolbar with your commands
+        #box_list = [ "make_box_command"]  # A list of command names created in the line above
+        #tab_list = ["multiple_tabs_command", "crosspiece"]
+        #export_list = ["export_command"]
+        all_command = ["make_box_command", "multiple_tabs_command", "crosspiece", "export_command"]
+        #self.appendToolbar("Empty box", box_list)
+        #self.appendToolbar("Tabs and crosspieces", tab_list)
+        #self.appendToolbar("Export", export_list)
+        self.appendToolbar("Export", all_command)
  
     def Activated(self):
         return

@@ -31,8 +31,15 @@ from helper import ObjectProperties, sort_quad_vertex, biggest_area_faces
 
 class MaterialProperties(ObjectProperties):
 
-    _allowed = ('type', 'thickness', 'thickness_tolerance', 'hole_width_tolerance', 'laser_beam_diameter', 'freecad_object')
+    _allowed = ('type', 'thickness', 'thickness_tolerance', 'hole_width_tolerance',
+                'laser_beam_diameter', 'freecad_object',
+                # For cross Part
+                'dog_bone', 'node_type', 'node_thickness')
     TYPE_LASER_CUT = 1
+    NODE_NO = "No node"
+    NODE_SINGLE_SHORT = 'Single short'
+    NODE_SINGLE_LONG = 'Single long'
+    NODE_DUAL_SHORT = 'Dual short'
 
     def __init__(self, **kwargs):
         super(MaterialProperties, self).__init__(**kwargs)
@@ -55,6 +62,13 @@ class MaterialProperties(ObjectProperties):
             self.new_name = "%s_tab" % self.freecad_object.Label
         if not hasattr(self, 'hole_width_tolerance'):
             self.hole_width_tolerance = 0.0
+        # For cross part
+        if not hasattr(self, 'dog_bone'):
+            self.dog_bone = True
+        if not hasattr(self, 'node_type'):
+            self.node_type = self.NODE_NO
+        if not hasattr(self, 'node_thickness'):
+            self.node_thickness = 0.05 * self.thickness
 
 
 # Prendre la normal la plus présente en terme de surface (biggest_area_faces)

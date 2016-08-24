@@ -27,6 +27,7 @@ import Part
 import FreeCAD
 import itertools
 import helper
+from material import MaterialProperties
 
 
 def is_inside(face, shape_to_test):
@@ -37,10 +38,191 @@ def is_inside(face, shape_to_test):
     return sphere.common(shape_to_test).Volume > 0.00001
 
 
-def make_box(length, width, height):
-    origin = FreeCAD.Vector(-length/2.0, -width / 2.0, -height)
-    box = Part.makeBox(length, width, height, origin)
-    return box
+def make_dog_bone_on_xz(pos_x, pos_z, width, radius):
+    cylinder = Part.makeCylinder(radius, width, FreeCAD.Vector(pos_x, -width/2.0, pos_z), FreeCAD.Vector(0, 1, 0))
+    return cylinder
+
+
+def make_dog_bone_on_yz(pos_y, pos_z, length, radius):
+    cylinder = Part.makeCylinder(radius, length, FreeCAD.Vector(-length / 2.0, pos_y, pos_z), FreeCAD.Vector(1, 0, 0))
+    return cylinder
+
+
+def make_cross_box(length, width, height, node_type, node_thickness):
+    half_length = length / 2.0
+
+    p1 = FreeCAD.Vector(half_length, 0, 0)
+    p2 = FreeCAD.Vector(-half_length, 0, 0)
+    p3 = FreeCAD.Vector(-half_length, 0, -height)
+    p4 = FreeCAD.Vector(half_length, 0, -height)
+
+    l1 = Part.Line(p1, p2)
+    l2 = Part.Line(p2, p3)
+    l3 = Part.Line(p3, p4)
+    l4 = Part.Line(p4, p1)
+    shape = Part.Shape([l1, l2, l3, l4])
+    wire = Part.Wire(shape.Edges)
+    face = Part.Face(wire)
+    face.translate(FreeCAD.Vector(0, -width / 2.0, 0))
+    part = face.extrude(FreeCAD.Vector(0, width, 0))
+    return part
+
+
+def make_dog_bones_xz(part, length, width, height, dog_bone_radius, up=True):
+    half_length = length / 2.0
+    shift_dog_bone = dog_bone_radius / 2.0
+    if up:
+        dog_bones = make_dog_bone_on_xz(half_length - shift_dog_bone, -shift_dog_bone, width, dog_bone_radius)
+        dog_bones = dog_bones.fuse(make_dog_bone_on_xz(-half_length + shift_dog_bone, -shift_dog_bone, width, dog_bone_radius))
+    else:
+        dog_bones = make_dog_bone_on_xz(-half_length + shift_dog_bone, -height + shift_dog_bone, width, dog_bone_radius)
+        dog_bones = dog_bones.fuse(make_dog_bone_on_xz(half_length - shift_dog_bone, -height + shift_dog_bone, width, dog_bone_radius))
+
+    part = part.fuse(dog_bones)
+    return part
+
+
+def make_dog_bones_yz(part, length, width, height, dog_bone_radius, up=True):
+    half_width = width / 2.0
+    shift_dog_bone = dog_bone_radius / 2.0
+    if up:
+        dog_bones = make_dog_bone_on_yz(-half_width + shift_dog_bone, -shift_dog_bone, length, dog_bone_radius)
+        dog_bones = dog_bones.fuse(make_dog_bone_on_yz(half_width - shift_dog_bone, -shift_dog_bone, length, dog_bone_radius))
+    else:
+        dog_bones = make_dog_bone_on_yz(-half_width + shift_dog_bone, -height + shift_dog_bone, length, dog_bone_radius)
+        dog_bones = dog_bones.fuse(make_dog_bone_on_yz(half_width - shift_dog_bone, -height + shift_dog_bone, length, dog_bone_radius))
+
+    part = part.fuse(dog_bones)
+    return part
+
+
+def make_node_xz(width, height, thickness,  x_positive = True):
+
+    p1 = FreeCAD.Vector(0., -thickness/2.0, height / 2.0)
+    p2 = FreeCAD.Vector(0., -thickness/2.0, -height / 2.0)
+    if x_positive is True:
+        pa = FreeCAD.Vector(width, -thickness/2.0, 0.)
+    else:
+        pa = FreeCAD.Vector(-width, -thickness/2.0, 0.)
+
+    l1 = Part.Line(p1, p2)
+    a2 = Part.Arc(p2, pa, p1)
+    shape = Part.Shape([l1, a2])
+    wire = Part.Wire(shape.Edges)
+    face = Part.Face(wire)
+    node = face.extrude(FreeCAD.Vector(0, thickness, 0))
+
+    return node
+
+
+def make_node_yz(width, height, thickness,  x_positive = True):
+
+    p1 = FreeCAD.Vector(-thickness/2.0, 0, height / 2.0)
+    p2 = FreeCAD.Vector(-thickness/2.0, 0, -height / 2.0)
+    if x_positive is True:
+        pa = FreeCAD.Vector(-thickness/2.0, width, 0.)
+    else:
+        pa = FreeCAD.Vector(-thickness/2.0, -width, 0.)
+
+    l1 = Part.Line(p1, p2)
+    a2 = Part.Arc(p2, pa, p1)
+    shape = Part.Shape([l1, a2])
+    wire = Part.Wire(shape.Edges)
+    face = Part.Face(wire)
+    node = face.extrude(FreeCAD.Vector(thickness, 0, 0))
+
+    return node
+
+# noeud court = 1/4 hauteur
+# noeud long = 1/2 hauteur
+# 2 neouds court = 2 * 1/4 hauteur espace de 16 % de la hateur au centre
+
+def make_nodes_xz(shape, x_length, thickness, z_length, node_type, node_thickness):
+
+    if node_type == MaterialProperties.NODE_NO:
+        return shape
+
+    nodes_list = []
+    if node_type == MaterialProperties.NODE_SINGLE_SHORT:
+        node_left = make_node_xz(node_thickness, z_length / 4.0, thickness, True)
+        node_right = make_node_xz(node_thickness, z_length / 4.0, thickness, False)
+        node_left.translate(FreeCAD.Vector(-x_length/2.0, 0, -z_length / 2.0))
+        node_right.translate(FreeCAD.Vector(x_length/2.0, 0, -z_length / 2.0))
+        nodes_list.append(node_left)
+        nodes_list.append(node_right)
+    elif node_type == MaterialProperties.NODE_SINGLE_LONG:
+        node_left = make_node_xz(node_thickness, z_length / 2.0, thickness, True)
+        node_right = make_node_xz(node_thickness, z_length / 2.0, thickness, False)
+        node_left.translate(FreeCAD.Vector(-x_length/2.0, 0, -z_length / 2.0))
+        node_right.translate(FreeCAD.Vector(x_length/2.0, 0, -z_length / 2.0))
+        nodes_list.append(node_left)
+        nodes_list.append(node_right)
+    elif node_type == MaterialProperties.NODE_DUAL_SHORT:
+        node_left_up = make_node_xz(node_thickness, z_length / 4.0, thickness, True)
+        node_right_up = make_node_xz(node_thickness, z_length / 4.0, thickness, False)
+        node_left_up.translate(FreeCAD.Vector(-x_length/2.0, 0, -z_length / 2.0 + (0.08 + 0.125) * z_length))
+        node_right_up.translate(FreeCAD.Vector(x_length/2.0, 0, -z_length / 2.0 + (0.08 + 0.125) * z_length))
+
+        node_left_down = make_node_xz(node_thickness, z_length / 4.0, thickness, True)
+        node_right_down = make_node_xz(node_thickness, z_length / 4.0, thickness, False)
+        node_left_down.translate(FreeCAD.Vector(-x_length/2.0, 0, -z_length / 2.0 - (0.08 + 0.125) * z_length))
+        node_right_down.translate(FreeCAD.Vector(x_length/2.0, 0, -z_length / 2.0 - (0.08 + 0.125) * z_length))
+
+        nodes_list.append(node_left_up)
+        nodes_list.append(node_right_up)
+        nodes_list.append(node_left_down)
+        nodes_list.append(node_right_down)
+    else:
+        raise ValueError("Not implemented")
+
+    for node in nodes_list:
+        shape = shape.cut(node)
+
+    return shape
+
+
+def make_nodes_yz(shape, thickness, y_length, z_length, node_type, node_thickness):
+
+    if node_type == MaterialProperties.NODE_NO:
+        return shape
+
+    nodes_list = []
+    if node_type == MaterialProperties.NODE_SINGLE_SHORT:
+        node_left = make_node_yz(node_thickness, z_length / 4.0, thickness, True)
+        node_right = make_node_yz(node_thickness, z_length / 4.0, thickness, False)
+        node_left.translate(FreeCAD.Vector(0, -y_length/2.0, -z_length / 2.0))
+        node_right.translate(FreeCAD.Vector(0, y_length/2.0, -z_length / 2.0))
+        nodes_list.append(node_left)
+        nodes_list.append(node_right)
+    elif node_type == MaterialProperties.NODE_SINGLE_LONG:
+        node_left = make_node_yz(node_thickness, z_length / 2.0, thickness, True)
+        node_right = make_node_yz(node_thickness, z_length / 2.0, thickness, False)
+        node_left.translate(FreeCAD.Vector(0, -y_length/2.0, -z_length / 2.0))
+        node_right.translate(FreeCAD.Vector(0, y_length/2.0, -z_length / 2.0))
+        nodes_list.append(node_left)
+        nodes_list.append(node_right)
+    elif node_type == MaterialProperties.NODE_DUAL_SHORT:
+        node_left_up = make_node_yz(node_thickness, z_length / 4.0, thickness, True)
+        node_right_up = make_node_yz(node_thickness, z_length / 4.0, thickness, False)
+        node_left_up.translate(FreeCAD.Vector(0, -y_length/2.0, -z_length / 2.0 + (0.08 + 0.125) * z_length))
+        node_right_up.translate(FreeCAD.Vector(0, y_length/2.0, -z_length / 2.0 + (0.08 + 0.125) * z_length))
+
+        node_left_down = make_node_yz(node_thickness, z_length / 4.0, thickness, True)
+        node_right_down = make_node_yz(node_thickness, z_length / 4.0, thickness, False)
+        node_left_down.translate(FreeCAD.Vector(0, -y_length/2.0, -z_length / 2.0 - (0.08 + 0.125) * z_length))
+        node_right_down.translate(FreeCAD.Vector(0, y_length/2.0, -z_length / 2.0 - (0.08 + 0.125) * z_length))
+
+        nodes_list.append(node_left_up)
+        nodes_list.append(node_right_up)
+        nodes_list.append(node_left_down)
+        nodes_list.append(node_right_down)
+    else:
+        raise ValueError("Not implemented")
+
+    for node in nodes_list:
+        shape = shape.cut(node)
+
+    return shape
 
 
 def get_transformation_matrix_from_vectors(x, y, z):
@@ -89,18 +271,38 @@ def retrieve_face_axis(sorted_areas_by_normals, shape):
 
 
 def remove_intersections(first_part, second_part, referential_faces, axis, invert_y = False):
-    length = (referential_faces[0].CenterOfMass - referential_faces[1].CenterOfMass).Length / 2.0
+    height = (referential_faces[0].CenterOfMass - referential_faces[1].CenterOfMass).Length / 2.0
     first_box_x = second_part.properties.thickness + second_part.properties.thickness_tolerance - second_part.properties.laser_beam_diameter + second_part.properties.hole_width_tolerance
-    first_box = make_box(first_box_x, first_part.properties.thickness, length)
+    first_box = make_cross_box(first_box_x, first_part.properties.thickness, height,
+                               first_part.properties.node_type, first_part.properties.node_thickness)
+    first_box = make_nodes_xz(first_box, first_box_x, first_part.properties.thickness, height,
+                              first_part.properties.node_type, first_part.properties.node_thickness)
+    dog_bone_radius = min(first_box_x, height) * 2. / 30.
+
     if invert_y:
-        first_box.translate(FreeCAD.Vector(0, 0, -length))
+        if first_part.properties.dog_bone:
+            first_box = make_dog_bones_xz(first_box, first_box_x, first_part.properties.thickness, height, dog_bone_radius, True)
+        first_box.translate(FreeCAD.Vector(0, 0, -height))
+    elif first_part.properties.dog_bone:
+        first_box = make_dog_bones_xz(first_box, first_box_x, first_part.properties.thickness, height, dog_bone_radius, False)
+
     transform_matrix = get_transformation_matrix_from_vectors(axis[0], axis[1], axis[2])
     transform(first_box, referential_faces[0], transform_matrix)
 
-    second_box_x = first_part.properties.thickness + first_part.properties.thickness_tolerance - first_part.properties.laser_beam_diameter + first_part.properties.hole_width_tolerance
-    second_box = make_box(second_part.properties.thickness, second_box_x, length)
+    second_box_y = first_part.properties.thickness + first_part.properties.thickness_tolerance - first_part.properties.laser_beam_diameter + first_part.properties.hole_width_tolerance
+    second_box = make_cross_box(second_part.properties.thickness, second_box_y, height,
+                                second_part.properties.node_type, second_part.properties.node_thickness)
+    second_box = make_nodes_yz(second_box, second_part.properties.thickness, second_box_y, height,
+                               second_part.properties.node_type, second_part.properties.node_thickness)
+
+    dog_bone_radius = min(second_box_y, height) * 2. / 30.
+
     if not invert_y:
-        second_box.translate(FreeCAD.Vector(0, 0, -length))
+        if second_part.properties.dog_bone:
+            second_box = make_dog_bones_yz(second_box, second_part.properties.thickness, second_box_y,height, dog_bone_radius, True)
+        second_box.translate(FreeCAD.Vector(0, 0, -height))
+    elif second_part.properties.dog_bone:
+        second_box = make_dog_bones_yz(second_box, second_part.properties.thickness, second_box_y, height, dog_bone_radius, False)
     transform(second_box, referential_faces[0], transform_matrix)
 
     #Part.show(first_box)
@@ -115,7 +317,7 @@ def remove_intersections(first_part, second_part, referential_faces, axis, inver
 #            |
 #            |Z
 #            ---------------------------> X
-# X is the width of part 2(correspond à la longueur de la piece 1)
+# X is the width of part 2.
 # Y is the width of part 1.
 # Z is the heigt of the intersection
 def make_cross_parts(parts):

@@ -32,6 +32,7 @@ class TabProperties(helper.ObjectProperties):
     TYPE_TAB = 'Tab'
     TYPE_T_SLOT = 'Screw'
     TYPE_CONTINUOUS = 'Continuous'
+    TYPE_FLEX = 'Flexible'
 
     _allowed = ('name', 'real_name', 'y_length', 'thickness', 'tabs_width', 'tabs_number', 'tabs_shift',
                 'dog_bone', 'screw_diameter', 'screw_length', 'makeScrew', 'y_invert'
