@@ -30,11 +30,12 @@ class BoxProperties(ObjectProperties):
 
     _allowed = ('length', 'width', 'height', 'thickness', 'outside_measure',
                 'length_width_priority', 'length_outside', 'width_outside',
-                'bottom_position', 'bottom_shift')
+                'bottom_position', 'bottom_shift', 'inner_radius')
 
     LENGTH_PRIORTY = "Length"
     WIDTH_PRIORTY = "Width"
     CROSS_PRIORTY = "No - Cross"
+    ROUND_PRIORTY = "No - For rounding"
 
     BOTTOM_OUTSIDE = "Outside"
     BOTTOM_INSIDE = "Inside"
@@ -58,6 +59,8 @@ class BoxProperties(ObjectProperties):
             self.length_outside = 0.
         if not hasattr(self, 'width_outside'):
             self.width_outside = 0.
+        if not hasattr(self, 'inner_radius'):
+            self.inner_radius = 0.
 
 
 class TopBottomProperties(ObjectProperties):

@@ -55,13 +55,20 @@ class LengthWidthBoxParam(ParamWidget):
             properties = BoxProperties()
         ParamWidget.__init__(self, properties)
         self.widget_list.extend([WidgetValue(type=list, name="length_width_priority", show_name="Priority", widget=None,
-                                             interval_value=[BoxProperties.LENGTH_PRIORTY, BoxProperties.WIDTH_PRIORTY, BoxProperties.CROSS_PRIORTY]),
-                                 WidgetValue(type=float, name="length_outside", show_name="Length outside", widget=None,
+                                             interval_value=[BoxProperties.LENGTH_PRIORTY, BoxProperties.WIDTH_PRIORTY,
+                                                             BoxProperties.CROSS_PRIORTY, BoxProperties.ROUND_PRIORTY]),
+                                 WidgetValue(type=float, name="length_outside", show_name="Diff. length", widget=None,
                                              interval_value=[0, 3000.], decimals=2, step=1,
-                                             parent_name="length_width_priority", parent_value=BoxProperties.CROSS_PRIORTY),
-                                 WidgetValue(type=float, name="width_outside", show_name="Width outside", widget=None,
+                                             parent_name="length_width_priority",
+                                             parent_value=[BoxProperties.CROSS_PRIORTY]),
+                                 WidgetValue(type=float, name="width_outside", show_name="Diff. width", widget=None,
                                              interval_value=[0, 3000.], decimals=2, step=1,
-                                             parent_name="length_width_priority", parent_value=BoxProperties.CROSS_PRIORTY)
+                                             parent_name="length_width_priority",
+                                             parent_value=[BoxProperties.CROSS_PRIORTY]),
+                                 WidgetValue(type=float, name="inner_radius", show_name="Width/length", widget=None,
+                                             interval_value=[0, 3000.], decimals=2, step=1,
+                                             parent_name="length_width_priority",
+                                             parent_value=[BoxProperties.ROUND_PRIORTY])
                                  ])
 
 

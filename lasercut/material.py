@@ -26,6 +26,7 @@
 import FreeCAD
 import Part
 import collections
+import copy
 from helper import ObjectProperties, sort_quad_vertex, biggest_area_faces
 
 
@@ -109,3 +110,4 @@ def retrieve_thickness_from_biggest_face(freecad_object):
     thickness_occ = counter_list.most_common(1)
 
     return thickness_occ[0][0]
+

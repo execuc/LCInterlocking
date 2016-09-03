@@ -26,6 +26,7 @@
 
 from PySide import QtCore, QtGui
 from lasercut.material import MaterialProperties
+from lasercut.hingesproperties import HingesProperties
 from toolwidget import ParamWidget, WidgetValue
 import copy
 
@@ -164,7 +165,3 @@ class PartsList(object):
                 part_properties.append(part.properties())
 
         return part_properties
-
-
-
-

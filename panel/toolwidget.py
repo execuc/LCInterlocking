@@ -129,6 +129,17 @@ class ParamWidget(object):
     def properties(self):
         return self.object_property
 
+    def get_widget(self, name):
+        widget = None
+        for widget_config in self.widget_list:
+            if widget_config.name == name:
+                widget = widget_config.widget
+                break
+
+        if widget is None:
+            raise ValueError("Widget " + str(name) + " not found")
+        return widget
+
     def listchangeIndex(self, index):
         self.get_properties()
         for widget_config in self.widget_list:

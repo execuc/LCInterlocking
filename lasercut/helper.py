@@ -27,6 +27,7 @@ import Part
 import FreeCAD
 
 import math
+import copy
 
 
 # http://stackoverflow.com/questions/2535917/copy-kwargs-to-self
@@ -34,6 +35,44 @@ class ObjectProperties(object):
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+
+
+class Segment:
+    def __init__(self, first=FreeCAD.Vector(0, 0, 0), second=FreeCAD.Vector(0, 0, 0)):
+        self.A = first
+        self.B = second
+
+    def a(self):
+        return self.A
+
+    def b(self):
+        return self.B * 1
+
+    def clone_a(self):
+        return self.A * 1
+
+    def clone_b(self):
+        return self.B * 1
+
+    def vector(self):
+        return self.B.sub(self.A)
+
+    def length(self):
+        return self.vector().Length
+
+    def mid_point(self):
+        mid_point_b = self.A.add(self.B)
+        mid_point_b.scale(0.5, 0.5, 0.5)
+        return mid_point_b
+
+    def get_angle(self, segment):
+        return self.vector().getAngle(segment.vector())
+
+    def add(self, vector):
+        return Segment(self.A.add(vector), self.B.add(vector))
+
+    def __repr__(self):
+        return "Segment A: " + str(self.A) + ", B: " + str(self.B)
 
 
 # http://www.fairburyfastener.com/xdims_metric_nuts.htm
@@ -161,12 +200,25 @@ def get_local_axis(face):
     return None, None, None
 
 
+def get_local_axis_normalized(face):
+    x_local, y_local_not_normalized, z_local_not_normalized = get_local_axis(face)
+    y_local_not_normalized.normalize()
+    z_local_not_normalized.normalize()
+    return x_local, y_local_not_normalized, z_local_not_normalized
+
+
 def compare_freecad_vector(vector1, vector2, epsilon=10e-6):
     vector = vector1.sub(vector2)
     if math.fabs(vector.x) < epsilon and math.fabs(vector.y) < epsilon and math.fabs(vector.z) < epsilon:
         return True
     return False
 
+
+def compare_value(value1, value2, epsilon=10e-6):
+    value = value1 - value2
+    if math.fabs(value) < epsilon:
+        return True
+    return False
 
 def compare_freecad_vector_direction(vector1, vector2, epsilon=10e-6):
     return math.fabs(vector1.cross(vector2).Length) < epsilon
