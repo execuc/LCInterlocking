@@ -22,7 +22,7 @@ Box generator
 --------------------
 This tool allows to create 6 faces of box without connection. Each dimensions can be defined.
 
-Demonstration : https://www.youtube.com/watch?v=X7DwDr0VpH4
+Demonstration : https://www.youtube.com/watch?v=wuu_lRsXGd0
 
 
 Interlocking
