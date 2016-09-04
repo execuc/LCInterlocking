@@ -22,7 +22,6 @@
 # *   MA  02110-1301  USA                                                   *
 # *                                                                         *
 # ***************************************************************************
-from docutils.nodes import thead
 
 from FreeCAD import Gui
 import FreeCAD
