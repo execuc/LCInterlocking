@@ -8,6 +8,8 @@ Interlocking demonstration : https://youtu.be/YGFIdLpdWXE
 
 ![Illustration](https://github.com/execuc/LCInterlocking/blob/master/test/Illustration.png)
 
+
+
 Goal
 --------------------
 This experimental FreeCAD module is used to create interlocking laser cut parts.
@@ -18,11 +20,23 @@ The contours of parts may be exported to svg format.
 Then we must with SVG tool (inkscape or other) to delete some unnecessary lines before using it for laser cutting.
 
 
+
 Box generator
 --------------------
-This tool allows to create 6 faces of box without connection. Each dimensions can be defined.
+This tool allows to create 6 faces of box without connection. Each dimensions can be defined. Then connections have to
+be defined with the interlocking tool.
 
 Demonstration : https://www.youtube.com/watch?v=wuu_lRsXGd0
+
+
+
+Rounded box generator
+--------------------
+This tool allows to create a box from a polygon which has a circumscribed circle. Each dimensions can be defined.
+Then connections have to be defined with the interlocking and living hinges tool.
+
+Demonstration : https://www.youtube.com/watch?v=lEOgZ6k9Vxw
+
 
 
 Interlocking
@@ -35,7 +49,9 @@ faces" is used to share same tab properties between selected faces.
 Click on preview to view result on an other document. Click OK to create new parts in the current document.
 
 Demonstration : https://youtu.be/YGFIdLpdWXE
+
 Test file : LCInterlocking/test/simple_box.fcstd
+
 
 
 Crosspiece :
@@ -46,13 +62,16 @@ Demonstration : https://www.youtube.com/watch?v=tIchogx5BLE
 Test files : LCInterlocking/test/crosspiece.fcstd and LCInterlocking/test/crosspiece2.fcstd
 
 
+
 Living hinges
 --------------------
 This tool is used to make curved laser bend surface. Faces of oriented part which follow are flatened and linked 
 with living hinges. Actually curved part must have its radius center equidistant from faces.
 
 Demonstration : https://www.youtube.com/watch?v=KSnMxqjA_-Q
+
 Test file : LCInterlocking/test/simple_hinges.fcstd
+
 
 
 SVG export
@@ -63,6 +82,7 @@ remove some unwanted lines as line between tab and its parts. To do it, ungroup 
 curves with very little tolerance and you can regroup all if you want.
 
 Some details are not correctly drawn with Inkscape (i.e. "circle) in contrary to Corel Draw for example.
+
 
 
 TODO

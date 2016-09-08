@@ -71,9 +71,18 @@ class Segment:
     def add(self, vector):
         return Segment(self.A.add(vector), self.B.add(vector))
 
+    def rotate_z(self, angle):
+        return Segment(rotate_vector_z(self.A, angle), rotate_vector_z(self.B, angle))
+
     def __repr__(self):
         return "Segment A: " + str(self.A) + ", B: " + str(self.B)
 
+
+def rotate_vector_z(vector, angle):
+        point = FreeCAD.Vector(vector.x, vector.y, vector.z)
+        point.x = vector.x * math.cos(angle) - vector.y * math.sin(angle)
+        point.y = vector.x * math.sin(angle) + vector.y * math.cos(angle)
+        return point
 
 # http://www.fairburyfastener.com/xdims_metric_nuts.htm
 def get_screw_nut_spec(metric_diameter, metric_length):

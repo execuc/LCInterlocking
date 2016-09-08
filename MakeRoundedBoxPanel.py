@@ -30,20 +30,20 @@ import Part
 import os
 import math
 import Draft
-from panel.box import BoxProperties, DimensionBoxParam, LengthWidthBoxParam, BottomBoxParam, TopBoxParam
-from lasercut import makebox
+from panel.roundedbox import DimensionRoundedBoxParam, BottomRoundedBoxParam, TopBoxRoundedParam
+from lasercut import makeroundedbox
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, 'icons')
 from PySide import QtCore, QtGui
 
 
-class MakeBox:
+class MakeRoundedBox:
 
     def __init__(self):
         self.form = []
         self.main_widget = QtGui.QWidget()
-        self.main_widget.setWindowTitle("Make box")
+        self.main_widget.setWindowTitle("Make rounded box")
         self.parts_vbox = QtGui.QGridLayout(self.main_widget)
         self.form.append(self.main_widget)
 
@@ -51,26 +51,27 @@ class MakeBox:
         self.parts_vbox.addWidget(self.preview_button, 0, 0, 1, 2)
         self.preview_button.clicked.connect(self.preview)
 
-        self.box_properties = BoxProperties()
-        self.dim_box_param = DimensionBoxParam(self.box_properties)
-        self.general_box_param = LengthWidthBoxParam(self.box_properties)
-        self.bottom_box_param = BottomBoxParam()
-        self.top_box_param = TopBoxParam()
+        self.box_properties = DimensionRoundedBoxParam()
+        self.bottom_box_param = BottomRoundedBoxParam()
+        self.top_box_param = TopBoxRoundedParam()
 
         self.param_widget = QtGui.QWidget()
         self.param_widget.setWindowTitle("Parameters")
         self.form.append(self.param_widget)
         self.params_vlayout = QtGui.QVBoxLayout(self.param_widget)
 
-        dim_group_box, grid = self.dim_box_param.get_group_box(self.param_widget)
-        length_group_box, grid = self.general_box_param.get_group_box(self.param_widget)
+        dim_group_box, grid = self.box_properties.get_group_box(self.param_widget)
         top_group_box, grid = self.top_box_param.get_group_box(self.param_widget)
         bottom_group_box, grid = self.bottom_box_param.get_group_box(self.param_widget)
 
         self.params_vlayout.addWidget(dim_group_box)
-        self.params_vlayout.addWidget(length_group_box)
         self.params_vlayout.addWidget(top_group_box)
         self.params_vlayout.addWidget(bottom_group_box)
+
+        radius_widget = self.box_properties.get_widget("inradius")
+        radius_widget.valueChanged.connect(self.update_parameters)
+        nb_face_widget = self.box_properties.get_widget("nb_face")
+        nb_face_widget.valueChanged.connect(self.update_parameters)
 
         self.actual_parts = []
         self.document = FreeCAD.ActiveDocument
@@ -86,6 +87,11 @@ class MakeBox:
     def reject(self):
         return True
 
+    def update_parameters(self, value):
+        self.box_properties.get_properties().compute_information()
+        self.box_properties.update_information()
+        return
+
     def create_new_parts(self, document, computed_parts):
         for part in computed_parts:
             new_shape = document.addObject("Part::Feature", part['name'])
@@ -94,11 +100,10 @@ class MakeBox:
         document.recompute()
 
     def compute_parts(self):
-        self.general_box_param.get_properties()
-        dimension_properties = self.dim_box_param.get_properties()
+        dimension_properties = self.box_properties.get_properties()
         top_properties = self.top_box_param.get_properties()
         bottom_properties = self.bottom_box_param.get_properties()
-        parts_list = makebox.make_box(dimension_properties, top_properties, bottom_properties)
+        parts_list = makeroundedbox.make_rounded_box(dimension_properties, top_properties, bottom_properties)
         return parts_list
 
     # Faire plutot un rendu dans le fenetre actuel, ne pas en creer une autre
@@ -120,23 +125,23 @@ class MakeBox:
             return
 
 
-class MakeBoxCommand:
+class MakeRoundedBoxCommand:
 
     def __init__(self):
         return
 
     def GetResources(self):
-        return {'Pixmap': os.path.join(iconPath, 'box.xpm'),  # the name of a svg file available in the resources
-                'MenuText': "Box",
-                'ToolTip': "Make box without tab"}
+        return {'Pixmap': os.path.join(iconPath, 'roundbox.xpm'),  # the name of a svg file available in the resources
+                'MenuText': "Rounded box",
+                'ToolTip': "Make rounded box without tab"}
 
     def IsActive(self):
         return FreeCAD.ActiveDocument is not None
 
     def Activated(self):
-        panel = MakeBox()
+        panel = MakeRoundedBox()
         FreeCADGui.Control.showDialog(panel)
         return
 
 
-Gui.addCommand('make_box_command', MakeBoxCommand())
+Gui.addCommand('make_rounded_box_command', MakeRoundedBoxCommand())

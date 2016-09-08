@@ -56,16 +56,12 @@ static char * laser_xpm[] = {
     def Initialize(self):
         import ExportPanel
         import MakeBoxPanel
+        import MakeRoundedBoxPanel
         from panel import multiplejoins, crosspiece, livinghinge
-        #box_list = [ "make_box_command"]  # A list of command names created in the line above
-        #tab_list = ["multiple_tabs_command", "crosspiece"]
-        #export_list = ["export_command"]
-        all_command = ["make_box_command", "multiple_tabs_command", "crosspiece", "export_command"]
-        #self.appendToolbar("Empty box", box_list)
-        #self.appendToolbar("Tabs and crosspieces", tab_list)
-        #self.appendToolbar("Export", export_list)
-        self.appendToolbar("Export", all_command)
-        self.appendToolbar("Test", ["livinghinge"])
+        all_command = ["make_box_command", "multiple_tabs_command", "crosspiece"]
+        self.appendToolbar("Tab", all_command)
+        self.appendToolbar("Hinge", ["make_rounded_box_command", "livinghinge"])
+        self.appendToolbar("Export", ["export_command"])
 
  
     def Activated(self):

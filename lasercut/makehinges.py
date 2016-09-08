@@ -35,11 +35,13 @@ def complete_hinges_properties(hinge):
     intersection_point = do_intersection(seg_face_1,seg_face_2)
 
     #print "intersection point : => " + str(intersection_point)
+    #print "seg1 " +str(seg_face_1)
+    #print "seg2 " +str(seg_face_2)
 
     diff_length_test = compare_value(intersection_point.sub(seg_face_1.B).Length,
                                      intersection_point.sub(seg_face_2.B).Length)
     if diff_length_test is False :
-        raise ValueError("Not an arc ")
+        raise ValueError("Not an arc %f %f" %(intersection_point.sub(seg_face_1.B).Length, intersection_point.sub(seg_face_2.B).Length))
     inner_arc_radius = intersection_point.sub(seg_face_1.B).Length
     outer_arc_radius = intersection_point.sub(seg_face_1.A).Length
     mid_arc_radius = intersection_point.sub(seg_face_1.mid_point()).Length
@@ -107,14 +109,20 @@ def get_segment_from_edge(edge1, edge2):
     length = edge1.Vertexes[0].Point.sub(edge2.Vertexes[0].Point).Length
     case = 1
 
-    if edge1.Vertexes[0].Point.sub(edge2.Vertexes[1].Point).Length < length:
+    test_length = edge1.Vertexes[0].Point.sub(edge2.Vertexes[1].Point).Length
+    if test_length < length:
         case = 2
+        length = test_length
 
-    if edge1.Vertexes[1].Point.sub(edge2.Vertexes[0].Point).Length < length:
+    test_length = edge1.Vertexes[1].Point.sub(edge2.Vertexes[0].Point).Length
+    if test_length < length:
         case = 3
+        length = test_length
 
-    if edge1.Vertexes[1].Point.sub(edge2.Vertexes[1].Point).Length < length:
+    test_length =  edge1.Vertexes[1].Point.sub(edge2.Vertexes[1].Point).Length
+    if test_length < length:
         case = 4
+        length = test_length
 
     if case == 1:
         first = Segment(edge1.Vertexes[1].Point, edge1.Vertexes[0].Point)
@@ -130,7 +138,6 @@ def get_segment_from_edge(edge1, edge2):
         second = Segment(edge2.Vertexes[0].Point, edge2.Vertexes[1].Point)
     else:
         raise ValueError("Impossible exception")
-
     return first, second
 
 
