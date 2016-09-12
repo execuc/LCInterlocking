@@ -327,7 +327,7 @@ class TreePanel(object):
         self.other_object_list = []
         objs = self.active_document.Objects
         for obj in objs:
-            if obj.ViewObject.isVisible():
+            if obj.ViewObject.isVisible() and hasattr(obj.ViewObject,"Transparency"):
                 self.other_object_list.append({'obj':obj, 'transparency':copy.copy(obj.ViewObject.Transparency)})
 
     def show_initial_objects(self):
