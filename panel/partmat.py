@@ -26,7 +26,7 @@
 
 from PySide import QtCore, QtGui
 from lasercut.material import MaterialProperties
-from lasercut.hingesproperties import HingesProperties
+from lasercut.helper import compare_value
 from toolwidget import ParamWidget, WidgetValue
 import copy
 
@@ -112,7 +112,7 @@ class PartsList(object):
             if src_part_element is None:
                 raise ValueError("No original part found")
             self.part_list.append(PartLink(freecad_object, src_part_element))
-            if self.part_list[-1].properties().thickness != src_part_element.properties().thickness:
+            if not compare_value(self.part_list[-1].properties().thickness, src_part_element.properties().thickness):
                 del self.part_list[-1]
                 raise ValueError(freecad_object.Name + " does not have the same thickness")
 
