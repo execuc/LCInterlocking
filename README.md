@@ -17,7 +17,7 @@ For example, a box created by a conventional method of FreeCAD PartDesign. A fir
 between parts (simple tabs/holes or T-Slots).
 A second feature rotate every pieces that belong to the same plane and uses the projection of the Draft module.
 The contours of parts may be exported to svg format.
-Then we must with SVG tool (inkscape or other) to delete some unnecessary lines before using it for laser cutting.
+It may be that there some unnecessary lines, so we must with SVG tool (inkscape or other) to delete them before using it for laser cutting.
 
 
 
@@ -78,11 +78,12 @@ SVG export
 --------------------
 Parts to be exported have to be selected before clicking to this feature. A new document is created with copied parts
 and projections on XY plan. Select projections and export it to the Flattened SVG format. You can use inkscape to
-remove some unwanted lines as line between tab and its parts. To do it, ungroup all, object to path, remove unwanted lines, join
+remove some unwanted lines (if exist) as line between tab and its parts. To do it, ungroup all, object to path, remove unwanted lines, join
 curves with very little tolerance and you can regroup all if you want.
 
 Some details are not correctly drawn with Inkscape (i.e. "circle) in contrary to Corel Draw for example.
-
+**NEW :** Thanks to arkhnchul, ".removeSplitter()" method is used on shape to remove these unwanted lines. If it leads to error,
+remove this call in exportPanel.py.
 
 
 TODO

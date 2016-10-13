@@ -114,7 +114,7 @@ class LivingHinges:
 
         self.create_object(self.preview_doc, flat_part, solid_part)
         if not preview_doc_exist :
-            FreeCADGui.getDocument(self.preview_doc.Label).ActiveView.fitAll()
+            FreeCADGui.getDocument(self.preview_doc.Name).ActiveView.fitAll()
         return
 
     def create_object(self, document, flat_part, solid_part):

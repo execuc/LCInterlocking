@@ -46,7 +46,7 @@ def get_freecad_object():
 
 
 def transform_shape(part_feature, new_part_feature, freecad_document):
-    new_part_feature.Shape = part_feature.Shape
+    new_part_feature.Shape = part_feature.Shape.removeSplitter()
     freecad_document.recompute()
     normal_face_prop = biggest_area_faces(part_feature.Shape)
     normal_ref = normal_face_prop[0]
@@ -76,7 +76,7 @@ class ExportCommand:
         parts_list = get_freecad_object()
         new_doc = FreeCAD.newDocument("export_shape")
         self.export_list(parts_list, new_doc)
-        FreeCADGui.getDocument(new_doc.Label).ActiveView.fitAll()
+        FreeCADGui.getDocument(new_doc.Name).ActiveView.fitAll()
         return
 
     def export_list(self, parts_list, freecad_document):

@@ -119,7 +119,7 @@ class MakeRoundedBox:
         computed_parts = self.compute_parts()
         self.create_new_parts(self.document, computed_parts)
         if first_preview:
-            FreeCADGui.getDocument(self.document.Label).ActiveView.fitAll()
+            FreeCADGui.getDocument(self.document.Name).ActiveView.fitAll()
 
         def init_widget():
             return
