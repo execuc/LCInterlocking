@@ -35,7 +35,7 @@ class TabProperties(helper.ObjectProperties):
     TYPE_FLEX = 'Flexible'
 
     _allowed = ('name', 'real_name', 'y_length', 'thickness', 'tabs_width', 'tabs_number', 'tabs_shift',
-                'dog_bone', 'screw_diameter', 'screw_length', 'makeScrew', 'y_invert'
+                'dog_bone', 'tab_dog_bone', 'screw_diameter', 'screw_length', 'makeScrew', 'y_invert'
                 'half_tab_ratio', 'interval_ratio', 'freecad_face', 'freecad_object', 'tab_type')
 
     def __init__(self, **kwargs):
@@ -50,9 +50,9 @@ class TabProperties(helper.ObjectProperties):
                 self.thickness = thickness.Length
                 self.y_length = y_length.Length
                 self.transform_matrix = helper.get_matrix_transform(self.freecad_face)
-#                FreeCAD.Console.PrintMessage("y_length : %f, thickness: %f\n" %(self.thickness, self.y_length))
+#                FreeCAD.Console.PrintError("y_length : %f, thickness: %f\n" %(self.thickness, self.y_length))
             except ValueError as e:
-                FreeCAD.Console.PrintMessage(e)
+                FreeCAD.Console.PrintError(e)
         if not hasattr(self, 'tabs_number'):
             self.tabs_number = 1
         if not hasattr(self, 'tabs_width'):
@@ -69,6 +69,8 @@ class TabProperties(helper.ObjectProperties):
             self.screw_length = 15.
         if not hasattr(self, 'dog_bone'):
             self.dog_bone = True
+        if not hasattr(self, 'tab_dog_bone'):
+            self.tab_dog_bone = False
         if not hasattr(self, 'y_invert'):
             self.y_invert = False
 

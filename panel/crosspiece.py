@@ -47,7 +47,7 @@ class CrossPiece(TreePanel):
             for part in self.partsList.get_parts_properties():
                 part.freecad_object.ViewObject.hide()
         except ValueError as e:
-            FreeCAD.Console.PrintMessage(e)
+            FreeCAD.Console.PrintError(e)
         return True
 
     def reject(self):

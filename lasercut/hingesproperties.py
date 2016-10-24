@@ -86,9 +86,9 @@ class GlobalLivingMaterialProperties(helper.ObjectProperties):
             self.thickness = 5.0
             try:
                 self.thickness = retrieve_thickness_from_biggest_face(self.freecad_object)
-                # FreeCAD.Console.PrintMessage("found : %f\n" % self.thickness)
+                # FreeCAD.Console.PrintError("found : %f\n" % self.thickness)
             except ValueError as e:
-                FreeCAD.Console.PrintMessage(e)
+                FreeCAD.Console.PrintError(e)
         if not hasattr(self, 'laser_beam_diameter'):
             self.laser_beam_diameter = self.thickness / 15.0
         if not hasattr(self, 'link_clearance'):

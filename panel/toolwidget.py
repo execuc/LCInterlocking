@@ -120,7 +120,10 @@ class ParamWidget(object):
     def get_group_box(self, widget):
         group_box = QtGui.QGroupBox(widget)
         group_box.setFlat(False)
-        group_box.setTitle(self.name)
+        if hasattr(self, 'description'):
+            group_box.setTitle("%s" % self.description)
+        else:
+            group_box.setTitle("%s" % self.name)
         self.form = widget
         grid = self.get_grid()
         group_box.setLayout(grid)

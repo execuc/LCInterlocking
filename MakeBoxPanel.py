@@ -80,7 +80,7 @@ class MakeBox:
         try:
             self.preview()
         except ValueError as e:
-            FreeCAD.Console.PrintMessage(e)
+            FreeCAD.Console.PrintError(e)
         return True
 
     def reject(self):

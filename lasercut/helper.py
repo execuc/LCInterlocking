@@ -199,11 +199,11 @@ def get_local_axis(face):
         computed_x_local = y_local.cross(z_local)
 
         if compare_freecad_vector(computed_x_local, x_local):
-            #FreeCAD.Console.PrintMessage("\nFound\n")
-            #FreeCAD.Console.PrintMessage(x_local)
-            #FreeCAD.Console.PrintMessage(y_local)
-            #FreeCAD.Console.PrintMessage(z_local)
-            #FreeCAD.Console.PrintMessage("\n\n")
+            #FreeCAD.Console.PrintError("\nFound\n")
+            #FreeCAD.Console.PrintError(x_local)
+            #FreeCAD.Console.PrintError(y_local)
+            #FreeCAD.Console.PrintError(z_local)
+            #FreeCAD.Console.PrintError("\n\n")
             return x_local, y_local_not_normalized, z_local_not_normalized
 
     return None, None, None
@@ -305,11 +305,11 @@ def check_limit_z(tab_face, width, pos_y, material_face, material_plane):
     box_y_size = width / 2.0
     box_z_size = 0.1
 
-    box_z_minus = Part.makeBox(box_x_size, box_y_size, box_z_size)
-    box_z_minus.translate(FreeCAD.Vector(0.005, pos_y - box_y_size/2.0, material_face.thickness / 2.0))
-
     box_z_plus = Part.makeBox(box_x_size, box_y_size, box_z_size)
-    box_z_plus.translate(FreeCAD.Vector(0.005, pos_y - box_y_size/2.0, -box_z_size - material_face.thickness / 2.0))
+    box_z_plus.translate(FreeCAD.Vector(0.005, pos_y - box_y_size/2.0, material_face.thickness / 2.0))
+
+    box_z_minus = Part.makeBox(box_x_size, box_y_size, box_z_size)
+    box_z_minus.translate(FreeCAD.Vector(0.005, pos_y - box_y_size/2.0, -box_z_size - material_face.thickness / 2.0))
 
     z_plus_inside, toto1 = check_intersect(box_z_plus, tab_face, material_plane)
     z_minus_inside, toto2 = check_intersect(box_z_minus, tab_face, material_plane)
@@ -326,23 +326,75 @@ def check_limit_z(tab_face, width, pos_y, material_face, material_plane):
     return z_plus_inside, z_minus_inside
 
 
-def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, material_plane,
-                                  left_kerf=True, right_kerf=True, dog_bone=False):
+def check_limit_y(tab_face, height, pos_y, width, material_plane):
+    box_x_size = material_plane.thickness / 2.0 # OK
+    box_y_size = 0.1
+    box_z_size = height / 2.0
+
+    box_y_minus = Part.makeBox(box_x_size, box_y_size, box_z_size)
+    box_y_minus.translate(FreeCAD.Vector(0.005, pos_y - width/2.0 - box_y_size, -box_z_size / 2.0))
+
+    box_y_plus = Part.makeBox(box_x_size, box_y_size, box_z_size)
+    box_y_plus.translate(FreeCAD.Vector(0.005, pos_y + width/2.0, -box_z_size / 2.0))
+
+    y_plus_inside, toto1 = check_intersect(box_y_plus, tab_face, material_plane)
+    y_minus_inside, toto2 = check_intersect(box_y_minus, tab_face, material_plane)
+
+    #shapeobj = FreeCAD.ActiveDocument.addObject("Part::Feature","y_plus_inside")
+    #shapeobj.Shape = toto1
+    #FreeCAD.ActiveDocument.recompute()
+
+    #shapeobj = FreeCAD.ActiveDocument.addObject("Part::Feature","y_minus_inside")
+    #shapeobj.Shape = toto2
+    #FreeCAD.ActiveDocument.recompute()
+    #print("y plus %r, minus %r" % (y_plus_inside, y_minus_inside))
+
+    return y_plus_inside, y_minus_inside
+
+
+def check_limit_y_on_for_tab(tab_face, height, pos_y, width, thickness, material_face):
+    box_x_size = thickness / 2.0 # OK
+    box_y_size = 0.1
+    box_z_size = height / 2.0
+
+    box_y_minus = Part.makeBox(box_x_size, box_y_size, box_z_size)
+    box_y_minus.translate(FreeCAD.Vector(-0.005 - box_x_size, pos_y - width/2.0 - box_y_size, -box_z_size / 2.0))
+
+    box_y_plus = Part.makeBox(box_x_size, box_y_size, box_z_size)
+    box_y_plus.translate(FreeCAD.Vector(-0.005 - box_x_size, pos_y + width/2.0, -box_z_size / 2.0))
+
+    y_plus_inside, toto1 = check_intersect(box_y_plus, tab_face, material_face)
+    y_minus_inside, toto2 = check_intersect(box_y_minus, tab_face, material_face)
+
+    #shapeobj = FreeCAD.ActiveDocument.addObject("Part::Feature","y_plus_inside")
+    #shapeobj.Shape = toto1
+    #FreeCAD.ActiveDocument.recompute()
+
+    #shapeobj = FreeCAD.ActiveDocument.addObject("Part::Feature","y_minus_inside")
+    #shapeobj.Shape = toto2
+    #FreeCAD.ActiveDocument.recompute()
+    #print("y plus %r, minus %r" % (y_plus_inside, y_minus_inside))
+
+    return y_plus_inside, y_minus_inside
+
+
+def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, material_plane, dog_bone=False):
 
     z_plus_inside, z_minus_inside = check_limit_z(tab_face, width, pos_y, material_face, material_plane)
+    y_plus_inside, y_minus_inside = check_limit_y(tab_face, material_face.thickness, pos_y, width, material_plane)
     #print("z_plus_inside %r, z_minus_inside %r" % (z_plus_inside, z_minus_inside))
     corrected_length = material_plane.thickness  # OK
 
     corrected_width = width + material_plane.hole_width_tolerance # - materialPlane.laser_beam_diameter
     corrected_width_center = corrected_width / 2.0
     width_to_remove = material_plane.laser_beam_diameter #+ material_plane.hole_width_tolerance
-    if left_kerf and right_kerf:
+    if y_minus_inside and y_plus_inside:
         corrected_width -= width_to_remove
         corrected_width_center = corrected_width / 2.0
-    elif left_kerf:
+    elif y_minus_inside:
         corrected_width -= width_to_remove / 2.0
         corrected_width_center = (corrected_width - width_to_remove / 2.0) / 2.0
-    elif right_kerf:
+    elif y_plus_inside:
         corrected_width -= width_to_remove / 2.0
         corrected_width_center = (corrected_width + width_to_remove / 2.0) / 2.0
 
@@ -351,21 +403,23 @@ def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, materia
     if z_plus_inside and z_minus_inside:
         corrected_height -= material_plane.laser_beam_diameter
         corrected_height_center = corrected_height / 2.0
-    elif z_plus_inside:
+    elif z_minus_inside:
         corrected_height -= material_plane.laser_beam_diameter / 2.0
         corrected_height_center = (corrected_height - material_plane.laser_beam_diameter / 2.0) / 2.0
-    elif z_minus_inside:
+    elif z_plus_inside:
         corrected_height -= material_plane.laser_beam_diameter / 2.0
         corrected_height_center = (corrected_height + material_plane.laser_beam_diameter / 2.0) / 2.0
 
-    #origin = FreeCAD.Vector(-corrected_length / 2.0, - corrected_width_center, -corrected_height_center)
     origin = FreeCAD.Vector(0., - corrected_width_center, -corrected_height_center)
     hole = Part.makeBox(corrected_length, corrected_width, corrected_height, origin)
     hole.translate(FreeCAD.Vector(0, pos_y, 0))
 
     if dog_bone:
-        hole = make_dog_bone_on_limits_on_yz(hole, corrected_length, z_plus_inside, z_plus_inside,
-                                             z_minus_inside, z_minus_inside)
+        hole = make_dog_bone_on_limits_on_yz(hole, corrected_length,
+                                             z_minus_inside and y_minus_inside,
+                                             z_minus_inside and y_plus_inside,
+                                             z_plus_inside and y_minus_inside,
+                                             z_plus_inside and y_plus_inside)
     return hole
 
 
@@ -395,14 +449,16 @@ def make_dog_bone_on_yz(pos_y, pos_z, height, radius):
     return cylinder
 
 
-def make_dog_bone_on_limits_on_xy(shape, length):
+def make_dog_bone_on_limits_on_xy(shape, length, x_min_only=False):
     bound_box = shape.BoundBox
     radius = min(bound_box.XMax - bound_box.XMin, bound_box.YMax - bound_box.YMin) * 2 / 30.
     shift = radius / 2.0
     shape = shape.fuse(make_dog_bone_on_xy(bound_box.XMin + shift, bound_box.YMin + shift, length, radius))
-    shape = shape.fuse(make_dog_bone_on_xy(bound_box.XMax - shift, bound_box.YMin + shift, length, radius))
+    if x_min_only is False:
+        shape = shape.fuse(make_dog_bone_on_xy(bound_box.XMax - shift, bound_box.YMin + shift, length, radius))
     shape = shape.fuse(make_dog_bone_on_xy(bound_box.XMin + shift, bound_box.YMax - shift, length, radius))
-    shape = shape.fuse(make_dog_bone_on_xy(bound_box.XMax - shift, bound_box.YMax - shift, length, radius))
+    if x_min_only is False:
+        shape = shape.fuse(make_dog_bone_on_xy(bound_box.XMax - shift, bound_box.YMax - shift, length, radius))
     return shape
 
 

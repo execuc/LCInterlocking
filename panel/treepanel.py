@@ -123,7 +123,7 @@ class TreePanel(object):
     def check_parts(self, parts):
         for part in parts:
             if self.partsList.exist(part.Name):
-                FreeCAD.Console.PrintMessage("Part %s is already configured" % part.Name)
+                FreeCAD.Console.PrintError("Part %s is already configured" % part.Name)
                 return False
         return True
 
@@ -138,7 +138,7 @@ class TreePanel(object):
                 item = self.partsList.append(part)
                 last_index = self.model.append_part(item.name, item.label)
             except ValueError as e:
-                FreeCAD.Console.PrintMessage(e)
+                FreeCAD.Console.PrintError(e)
                 return
         self.force_selection(last_index)
 
@@ -155,7 +155,7 @@ class TreePanel(object):
                 item = self.partsList.append_link(part, parts[0])
                 self.model.append_part(item.name, item.label, True)
         except ValueError as e:
-            FreeCAD.Console.PrintMessage(e)
+            FreeCAD.Console.PrintError(e)
             return
         self.force_selection(index)
         return
@@ -167,10 +167,10 @@ class TreePanel(object):
         parent_test_name = indexes[0].internalPointer().parent().get_name()
         for index in indexes[1:]:
             if index.internalPointer().parent().get_name() != parent_test_name:
-                FreeCAD.Console.PrintMessage("No same level delete")
+                FreeCAD.Console.PrintError("No same level delete")
                 return False
             elif index.internalPointer().child_count() > 0:
-                FreeCAD.Console.PrintMessage("%s has children" % index.internalPointer().get_name())
+                FreeCAD.Console.PrintError("%s has children" % index.internalPointer().get_name())
                 return False
 
         for index in indexes:
@@ -180,11 +180,11 @@ class TreePanel(object):
             elif item.type == TreeItem.TAB or item.type == TreeItem.TAB_LINK:
                 self.tabsList.remove(item.get_name())
             else:
-                FreeCAD.Console.PrintMessage("Unknown deleter item")
+                FreeCAD.Console.PrintError("Unknown deleter item")
 
         rows = sorted(set(index.row() for index in indexes))
         for row in reversed(rows):
-            FreeCAD.Console.PrintMessage("remove row %d" % row)
+            #FreeCAD.Console.PrintError("remove row %d" % row)
             self.model.removeRow(row, indexes[0].parent())
 
         return
@@ -192,10 +192,10 @@ class TreePanel(object):
     def check_faces(self, faces):
         for face in faces:
             if not self.partsList.exist(face['freecad_object'].Name):
-                FreeCAD.Console.PrintMessage("Part of face %s is not configured" % face['name'])
+                FreeCAD.Console.PrintError("Part of face %s is not configured" % face['name'])
                 return False
             elif self.tabsList.exist(face['name']):
-                FreeCAD.Console.PrintMessage("Face %s already present" % face['name'])
+                FreeCAD.Console.PrintError("Face %s already present" % face['name'])
                 return False
         return True
 
@@ -211,7 +211,7 @@ class TreePanel(object):
                                             self.tab_type_box.currentText())
                 last_index = self.model.append_tab(face['freecad_object'].Name, item.name, item.real_name)
             except ValueError as e:
-                FreeCAD.Console.PrintMessage(e)
+                FreeCAD.Console.PrintError(e)
                 return
         self.force_selection(last_index)
         return
@@ -234,7 +234,7 @@ class TreePanel(object):
                 self.model.append_tab(face['freecad_object'].Name, item.name, item.real_name, True)
 
         except ValueError as e:
-            FreeCAD.Console.PrintMessage(e)
+            FreeCAD.Console.PrintError(e)
             return
         self.force_selection(index)
         return
@@ -331,18 +331,18 @@ class TreePanel(object):
                 self.other_object_list.append({'obj':obj, 'transparency':copy.copy(obj.ViewObject.Transparency)})
 
     def show_initial_objects(self):
-        FreeCAD.Console.PrintMessage("\nShow\n")
+        FreeCAD.Console.PrintError("\nShow\n")
         for obj in self.other_object_list:
             freecad_object = obj['obj']
             freecad_object.ViewObject.show()
         return
 
     def hide_others(self):
-        FreeCAD.Console.PrintMessage("Hide others\n")
+        FreeCAD.Console.PrintError("Hide others\n")
         current_obj_list = selection.get_freecad_objects_list()
         object_list = []
         if current_obj_list is None or len(current_obj_list) == 0:
-            FreeCAD.Console.PrintMessage("No object selectionned\n")
+            FreeCAD.Console.PrintError("No object selectionned\n")
             return
         objects = self.active_document.Objects
         for obj in objects:

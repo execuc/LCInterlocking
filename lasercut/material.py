@@ -52,9 +52,9 @@ class MaterialProperties(ObjectProperties):
             self.thickness = 5.0
             try:
                 self.thickness = retrieve_thickness_from_biggest_face(self.freecad_object)
-                # FreeCAD.Console.PrintMessage("found : %f\n" % self.thickness)
+                # FreeCAD.Console.PrintError("found : %f\n" % self.thickness)
             except ValueError as e:
-                FreeCAD.Console.PrintMessage(e)
+                FreeCAD.Console.PrintError(e)
         if not hasattr(self, 'thickness_tolerance'):
             self.thickness_tolerance = 0.1 * self.thickness
         if not hasattr(self, 'laser_beam_diameter'):

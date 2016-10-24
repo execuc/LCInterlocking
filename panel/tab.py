@@ -33,6 +33,7 @@ class BaseTabWidget(ParamWidget):
 
     def __init__(self, cad_face, cad_object, name, t_type):
         self.name = "%s.%s" % (cad_object.Name, name)
+        self.description = "%s.%s (%s)" % (cad_object.Name, name, t_type)
         self.real_name = name
         tab_properties = TabProperties(freecad_object=cad_object, freecad_face=cad_face, tab_type=t_type,
                                        name=self.name, real_name=self.real_name)
@@ -47,7 +48,8 @@ class BaseTabWidget(ParamWidget):
                                             interval_value=[-300, 300.], step=1., decimals=2),
                                 WidgetValue(type=float, name="interval_ratio", show_name="Interval ratio",
                                             widget=None, interval_value=[0.1, 5.], step=0.1, decimals=2),
-                                WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None)
+                                WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None),
+                                WidgetValue(type=bool, name="tab_dog_bone", show_name="Tab dog bone hole", widget=None)
                                  ])
 
     def get_tab_type(self):
@@ -80,10 +82,11 @@ class TabContinuousWidget(BaseTabWidget):
 
         self.widget_list = [WidgetValue(type=float, name="y_length", show_name="Width", widget=None),
                             WidgetValue(type=float, name="thickness", show_name="Thickness", widget=None),
-                            WidgetValue(type=float, name="tabs_number", show_name="Number of tabs",
-                                            widget=None, interval_value=[1., 300.], step=1., decimals=0),
+                            WidgetValue(type=float, name="tabs_number", show_name="Number of elements",
+                                            widget=None, interval_value=[2., 300.], step=1., decimals=0),
                             WidgetValue(type=bool, name="y_invert", show_name="Invert Y", widget=None),
-                            WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None)]
+                            WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None),
+                            WidgetValue(type=bool, name="tab_dog_bone", show_name="Tab dog bone hole", widget=None)]
 
 
 class TabFlexWidget(BaseTabWidget):
@@ -115,7 +118,7 @@ class TabLink(ParamWidget):
         self.form = widget
         grid = self.get_grid()
         title = QtGui.QLabel(self.form)
-        title.setText("Linked tab to : %s" % self.tab_link.name)
+        title.setText("Linked tab to : %s" % self.tab_link.description)
         grid.addWidget(title, 1, 0, 1, 2)
         group_box.setLayout(grid)
         group_box.setTitle(self.name)
