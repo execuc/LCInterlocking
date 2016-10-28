@@ -6,7 +6,7 @@ It is not reliable, you have to check parts before doing the laser cut, don't tr
 
 Interlocking demonstration : https://youtu.be/YGFIdLpdWXE
 
-![Illustration](https://github.com/execuc/LCInterlocking/tree/master/Illustration.png)
+![Illustration](https://github.com/execuc/LCInterlocking/blob/master/test/Illustration.png)
 
 
 
