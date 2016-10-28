@@ -17,7 +17,6 @@ For example, a box created by a conventional method of FreeCAD PartDesign. A fir
 between parts (simple tabs/holes or T-Slots).
 A second feature rotate every pieces that belong to the same plane and uses the projection of the Draft module.
 The contours of parts may be exported to svg format.
-It may be that there some unnecessary lines, so we must with SVG tool (inkscape or other) to delete them before using it for laser cutting.
 
 
 
