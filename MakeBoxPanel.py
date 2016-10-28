@@ -84,6 +84,8 @@ class MakeBox:
         return True
 
     def reject(self):
+        for part in self.actual_parts:
+            self.document.removeObject(part.Name)
         return True
 
     def create_new_parts(self, document, computed_parts):
@@ -101,8 +103,6 @@ class MakeBox:
         parts_list = makebox.make_box(dimension_properties, top_properties, bottom_properties)
         return parts_list
 
-    # Faire plutot un rendu dans le fenetre actuel, ne pas en creer une autre
-    #self.active_document != FreeCAD.ActiveDocument:
     def preview(self):
         first_preview = len(self.actual_parts) == 0
 
