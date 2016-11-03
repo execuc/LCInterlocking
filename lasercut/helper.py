@@ -88,31 +88,31 @@ def rotate_vector_z(vector, angle):
 def get_screw_nut_spec(metric_diameter, metric_length):
     if metric_diameter == 1.6:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=3.2, nut_height=1.3)
+                                screw_length_tol=0.1, nut_flat_flat=3.2, nut_height=1.3)
     elif metric_diameter == 2:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=4., nut_height=1.6)
+                                screw_length_tol=0.1, nut_flat_flat=4., nut_height=1.6)
     elif metric_diameter == 2.5:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=5., nut_height=2.)
+                                screw_length_tol=0.1, nut_flat_flat=5., nut_height=2.)
     elif metric_diameter == 3:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=5.5, nut_height=2.4)
+                                screw_length_tol=0.1,  nut_flat_flat=5.5, nut_height=2.4)
     elif metric_diameter == 4:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=7., nut_height=3.2)
+                                screw_length_tol=0.1,  nut_flat_flat=7., nut_height=3.2)
     elif metric_diameter == 5:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=8., nut_height=4.7)
+                                screw_length_tol=0.1, nut_flat_flat=8., nut_height=4.7)
     elif metric_diameter == 6:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=10., nut_height=5.2)
+                                screw_length_tol=0.1, nut_flat_flat=10., nut_height=5.2)
     elif metric_diameter == 8:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=13., nut_height=6.8)
+                                screw_length_tol=0.1, nut_flat_flat=13., nut_height=6.8)
     elif metric_diameter == 10:
         return ObjectProperties(screw_diameter=metric_diameter, screw_length=metric_length,
-                                nut_flat_flat=16., nut_height=8.4)
+                                screw_length_tol=0.1, nut_flat_flat=16., nut_height=8.4)
     raise ValueError("Unknown screw diameter")
 
 

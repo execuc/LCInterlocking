@@ -35,8 +35,8 @@ class TabProperties(helper.ObjectProperties):
     TYPE_FLEX = 'Flexible'
 
     _allowed = ('name', 'real_name', 'y_length', 'thickness', 'tabs_width', 'tabs_number', 'tabs_shift',
-                'dog_bone', 'tab_dog_bone', 'screw_diameter', 'screw_length', 'makeScrew', 'y_invert'
-                'half_tab_ratio', 'interval_ratio', 'freecad_face', 'freecad_object', 'tab_type')
+                'dog_bone', 'tab_dog_bone', 'screw_diameter', 'screw_length', 'screw_length_tol', 'makeScrew',
+                'y_invert', 'half_tab_ratio', 'interval_ratio', 'freecad_face', 'freecad_object', 'tab_type')
 
     def __init__(self, **kwargs):
         super(TabProperties, self).__init__(**kwargs)
@@ -67,6 +67,8 @@ class TabProperties(helper.ObjectProperties):
             self.screw_diameter = 3.
         if not hasattr(self, 'screw_length'):
             self.screw_length = 15.
+        if not hasattr(self, 'screw_length_tol'):
+            self.screw_length_tol = 0.5
         if not hasattr(self, 'dog_bone'):
             self.dog_bone = True
         if not hasattr(self, 'tab_dog_bone'):

@@ -72,7 +72,9 @@ class TSlotWidget(BaseTabWidget):
                                 WidgetValue(type=float, name="screw_diameter", show_name="Screw diameter",
                                             widget=None, interval_value=[1., 30.], step=1., decimals=2.),
                                 WidgetValue(type=float, name="screw_length", show_name="Screw length",
-                                            widget=None, interval_value=[5., 300.], step=1., decimals=2.)])
+                                            widget=None, interval_value=[5., 300.], step=1., decimals=2.),
+                                WidgetValue(type=float, name="screw_length_tol", show_name="Screw length tol.",
+                                            widget=None, interval_value=[0, 300.], step=1., decimals=2.)])
 
 
 class TabContinuousWidget(BaseTabWidget):

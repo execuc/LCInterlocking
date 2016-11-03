@@ -74,7 +74,8 @@ def screw_way_on_plane(material_plane, screw_nut_spec, pos_y):
 
 def screw_way_on_face(material_face, material_plane, screw_nut_spec, pos_y, dog_bone=False):
     # horizontal hole
-    vert_corrected_length = screw_nut_spec.screw_length - material_plane.thickness + material_plane.thickness_tolerance
+    vert_corrected_length = screw_nut_spec.screw_length - material_plane.thickness \
+                            + material_plane.thickness_tolerance + screw_nut_spec.screw_length_tol
     corrected_width = screw_nut_spec.screw_diameter * 1.2 - material_face.laser_beam_diameter
     corrected_height = material_face.thickness  # + materialFace.tolerance
     screw_hole = Part.makeBox(vert_corrected_length, corrected_width, corrected_height,
@@ -84,12 +85,13 @@ def screw_way_on_face(material_face, material_plane, screw_nut_spec, pos_y, dog_
         screw_hole = helper.make_dog_bone_on_limits_on_xy(screw_hole, corrected_height, True)
     x_pos = -vert_corrected_length
     screw_hole.translate(FreeCAD.Vector(x_pos, pos_y, 0))
+    # Nut hole
     corrected_length = screw_nut_spec.nut_height - material_face.laser_beam_diameter + 0.1
     corrected_width = screw_nut_spec.nut_flat_flat - material_face.laser_beam_diameter + 0.1
     nut_hole = Part.makeBox(corrected_length, corrected_width, corrected_height,
                             FreeCAD.Vector(0,
                                            -corrected_width / 2.0, -corrected_height / 2.0))
-    x_pos = -vert_corrected_length + screw_nut_spec.nut_height
+    x_pos = -vert_corrected_length + screw_nut_spec.nut_height + screw_nut_spec.screw_length_tol
     nut_hole.translate(FreeCAD.Vector(x_pos, pos_y, 0))
     if dog_bone:
         nut_hole = helper.make_dog_bone_on_limits_on_xy(nut_hole, corrected_height)
@@ -211,6 +213,7 @@ def make_continuous_tab_joins(tab, tab_part, other_parts):
 def make_tslot_tab_join(tab, tab_part, other_parts):
     half_tab_distance = (tab.screw_diameter * tab.half_tab_ratio) + tab.tabs_width / 2.0
     screw_nut_spec = helper.get_screw_nut_spec(tab.screw_diameter, tab.screw_length)
+    screw_nut_spec.screw_length_tol = tab.screw_length_tol
     slots_pos = get_slot_positions(tab)
     for i, y in enumerate(slots_pos):
         for part_interactor in other_parts:
