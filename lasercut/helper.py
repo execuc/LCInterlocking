@@ -27,7 +27,7 @@ import Part
 import FreeCAD
 
 import math
-import copy
+from operator import itemgetter, attrgetter
 
 
 # http://stackoverflow.com/questions/2535917/copy-kwargs-to-self
@@ -229,6 +229,7 @@ def compare_value(value1, value2, epsilon=10e-6):
         return True
     return False
 
+
 def compare_freecad_vector_direction(vector1, vector2, epsilon=10e-6):
     return math.fabs(vector1.cross(vector2).Length) < epsilon
 
@@ -253,43 +254,50 @@ def sort_quad_vertex(list_edges, reverse):
     return list_points
 
 
-# TODO : not clean
-def get_value(item):
-    return item[1]
-
 def biggest_area_faces(freecad_shape):
-    sorted_list = sort_area_faces(freecad_shape)
+    sorted_list = sort_area_shape_faces(freecad_shape)
     biggest_area_face = sorted_list[-1]
 #       contains : 0:normal, 1:area mm2, 2; list of faces
     return biggest_area_face
 
+
 def smallest_area_faces(freecad_shape):
-    sorted_list = sort_area_faces(freecad_shape)
+    sorted_list = sort_area_shape_faces(freecad_shape)
     smallest_area_face = sorted_list[0]
 #       contains : 0:normal, 1:area mm2, 2; list of faces
     return smallest_area_face
 
+
 #   Returns face grouping by normal,sorted by the amount of surface (descending)
-def sort_area_faces(shape):
+def sort_area_shape_faces(shape):
+    return sort_area_face_common(shape.Faces, compare_freecad_vector_direction)
+
+
+def sort_area_shape_list(faces_list):
+    return sort_area_face_common(faces_list, compare_freecad_vector)
+
+
+def sort_area_face_common(faces, test_function=compare_freecad_vector_direction):
     normal_area_list = []
-    for face in shape.Faces:
+    for face in faces:
         # print face
         normal = face.normalAt(0, 0)
         # print normal
         found = False
         for i in range(len(normal_area_list)):
             normal_test = normal_area_list[i][0]
-            if compare_freecad_vector_direction(normal, normal_test):  # inverse to test
+            if test_function(normal, normal_test):
                 found = True
                 normal_area_list[i][1] += face.Area
                 normal_area_list[i][2].append(face)
+                tmp = sorted(normal_area_list[i][2], key=attrgetter('Area'),  reverse=True)
+                normal_area_list[i][2] = tmp
                 break
         if not found:
             normal_area_list.append([normal, face.Area, [face]])
     # print normal_area_list
-    sorted_list = sorted(normal_area_list, key=get_value)
+    sorted_list = sorted(normal_area_list, key=itemgetter(1))
     return sorted_list
-
 
 #            X (Length)
 #            |

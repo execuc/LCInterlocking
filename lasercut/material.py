@@ -27,7 +27,7 @@ import FreeCAD
 import Part
 import collections
 import copy
-from helper import ObjectProperties, sort_quad_vertex, biggest_area_faces
+from helper import ObjectProperties, sort_quad_vertex, biggest_area_faces, sort_area_shape_list
 
 
 class MaterialProperties(ObjectProperties):
@@ -84,8 +84,13 @@ def retrieve_thickness_from_bounded_box():
 # de la premiere face et ceux de la deuxième face. La distance la plus petite est l'éppaisseur estimé.
 def retrieve_thickness_from_biggest_face(freecad_object):
     area_faces = biggest_area_faces(freecad_object.Shape)
-    list_edges_face1 = Part.__sortEdges__(area_faces[2][0].Edges)
-    list_edges_face2 = Part.__sortEdges__(area_faces[2][1].Edges)
+    # order faces by normals
+    sub_areas_face = sort_area_shape_list(area_faces[2])
+    # TODO : check if normals at opposite
+    #list_edges_face1 = Part.__sortEdges__(area_faces[2][0].Edges)
+    #list_edges_face2 = Part.__sortEdges__(area_faces[2][1].Edges)
+    list_edges_face1 = Part.__sortEdges__(sub_areas_face[0][2][0].Edges)
+    list_edges_face2 = Part.__sortEdges__(sub_areas_face[1][2][0].Edges)
 
     list_pts_face1 = sort_quad_vertex(list_edges_face1, False)
     if list_pts_face1 is None:
@@ -105,7 +110,7 @@ def retrieve_thickness_from_biggest_face(freecad_object):
         for vec2 in list_pts_face2:
             tab_diff.append(vec1.sub(vec2).Length)
         min_array.append(min(tab_diff))
-
+    # print "min_array " + str(min_array)
     counter_list = collections.Counter(min_array)
     thickness_occ = counter_list.most_common(1)
 

@@ -337,11 +337,11 @@ def make_cross_parts(parts):
         second_shape = second_part.properties.freecad_object.Shape
         intersect_shape = first_shape.common(second_shape)
         if intersect_shape.Volume > 0.001:
-            sorted_areas_by_normals = helper.sort_area_faces(intersect_shape)
+            sorted_areas_by_normals = helper.sort_area_shape_faces(intersect_shape)
             str_parts_name = first_part.get_name() + " -> " + second_part.get_name()
             if len(sorted_areas_by_normals) != 3:
                 raise ValueError(str_parts_name + " : intersection is not rectangular box")
-            smallest_area = helper.sort_area_faces(intersect_shape)[0]
+            smallest_area = helper.sort_area_shape_faces(intersect_shape)[0]
             referential_faces = smallest_area[2]
             first_face = referential_faces[0]
             second_face = referential_faces[1]
