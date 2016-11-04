@@ -85,6 +85,8 @@ class MakeRoundedBox:
         return True
 
     def reject(self):
+        for part in self.actual_parts:
+            self.document.removeObject(part.Name)
         return True
 
     def update_parameters(self, value):
