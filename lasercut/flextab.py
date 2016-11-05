@@ -44,7 +44,7 @@ def make_round_tab(tab, tab_part, other_parts):
                                                                         part_interactor.properties)
         if intersect_test:
             tab_part.toAdd.append(tab_to_add_transformed)
-            print "tab " + str(tab.dog_bone)
+            #print "tab " + str(tab.dog_bone)
             hole = helper.tab_join_create_hole_on_plane(tab, tab.tabs_width, y, tab_part.properties,
                                                         part_interactor.properties, tab.dog_bone)
             part_interactor.toRemove.append(helper.transform_part(hole, tab))

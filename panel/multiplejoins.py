@@ -60,7 +60,7 @@ class MultipleJoins(TreePanel):
         return make_tabs_joins(parts, tabs)
 
     def preview(self):
-        FreeCAD.Console.PrintMessage("Preview Button\n")
+        #FreeCAD.Console.PrintMessage("Preview Button\n")
         computed_parts = self.compute_parts()
         preview_doc_exist = True
         try:

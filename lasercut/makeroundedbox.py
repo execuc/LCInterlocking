@@ -173,7 +173,7 @@ def retrieve_segments_arc(polygon_segment):
         outer_arc_point = outer_arc_point.add(intersection_point)
         arcs_segment_list.append(helper.Segment(outer_arc_point, inner_arc_point))
 
-    print "Computed arc radius : inner = %f, outer = %f" % (inner_arc_radius, outer_arc_radius)
+    FreeCAD.Console.PrintMessage("Computed arc radius : inner = %f, outer = %f" % (inner_arc_radius, outer_arc_radius))
     return arcs_segment_list
 
 

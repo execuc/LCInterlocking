@@ -174,12 +174,12 @@ def do_intersection(seg1, seg2):
     dc = seg2.A - seg1.A
 
     coplanar_val = dc.dot(da.cross(db))
-    if coplanar_val != 0.:
-        raise ValueError("Not coplanar")
+    if not compare_value(coplanar_val, 0.):
+        raise ValueError("Not coplanar (seg1: %s, seg2: %s) => res: %s" %(str(seg1), str(seg2), str(coplanar_val)))
 
     a = dc.cross(db).dot(da.cross(db))
     s = dc.cross(db).dot(da.cross(db)) / da.cross(db).dot(da.cross(db))
-    if s >= 0.:
+    if s >= 10e-6:
         da.scale(s, s, s)
         ip = seg1.A.add(da)
         return ip
@@ -201,21 +201,22 @@ def create_linked_part(hinges_list, material_properties):
     if material_properties.laser_beam_diameter > material_properties.link_clearance:
         raise ValueError("Laser beam diameter is greater than clearance width")
     elif material_properties.link_clearance < 2. * material_properties.laser_beam_diameter:
-        print "Caution : link clearance is less than twice the laser beam diameter. Exported svg " + \
+        FreeCAD.Console.PrintMessage( \
+              "Caution : link clearance is less than twice the laser beam diameter. Exported svg " + \
               "will contains lines too close and the laser will almost go twice in the same position.\n" + \
               "It is advisable to choose a clearance at least twice the kerf. You could also set clearance " + \
               "equals to kerf if you want laser have one passage. But in the exported SVG, hinges apertures " + \
               "are in fact square with 10e-3 width, so you have to remove manually the three others sides " + \
-              "for all square to avoid laser returning to same place."
+              "for all square to avoid laser returning to same place.")
 
     parts_to_fuse = [hinges_list[0].freecad_object_1.Shape.copy()]
     hinges_to_removes = []
     last_face = hinges_list[0].freecad_face_1
     sum_angle = 0.
     rotation_vector = None
-    for hinge in hinges_list:
+    for index, hinge in enumerate(hinges_list):
         if hinge.nb_link < hinge.min_links_nb:
-            print "Min. link is not respected for living hinges named " + str(hinge.name)
+            FreeCAD.Console.PrintError("Min. link is not respected for living hinges named " + str(hinge.name))
 
         flat_connection = create_flat_connection(hinge, last_face)
         parts_to_fuse.append(flat_connection)
@@ -229,7 +230,8 @@ def create_linked_part(hinges_list, material_properties):
         second_shape_transformed = assemble_shape(last_face, hinge.freecad_object_2.Shape, hinge.freecad_face_2,
                                                   rotation_vector, -sum_angle)
         parts_to_fuse.append(second_shape_transformed)
-        last_face = find_same_normal_face(second_shape_transformed, last_face)
+        if index < (len(hinges_list) - 1):
+            last_face = find_same_normal_face(second_shape_transformed, last_face)
 
     flat_part = assemble_list_element(parts_to_fuse)
     for hinge_to_remove in hinges_to_removes:

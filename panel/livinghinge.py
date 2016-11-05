@@ -77,7 +77,8 @@ class LivingHinges:
 
         try:
             self.add_connection()
-        except ValueError:
+        except ValueError as err:
+            FreeCAD.Console.PrintError(err)
             pass
 
         return
@@ -97,7 +98,7 @@ class LivingHinges:
         return create_linked_part(connection_list, self.global_properties.get_properties())
 
     def preview(self):
-        FreeCAD.Console.PrintMessage("Preview Button\n")
+        #FreeCAD.Console.PrintMessage("Preview Button\n")
         flat_part, solid_part = self.compute_parts()
         preview_doc_exist = True
         try:

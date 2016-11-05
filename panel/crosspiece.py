@@ -61,7 +61,7 @@ class CrossPiece(TreePanel):
         return make_cross_parts(parts)
 
     def preview(self):
-        FreeCAD.Console.PrintMessage("Preview Button\n")
+        #FreeCAD.Console.PrintMessage("Preview Button\n")
         computed_parts = self.compute_parts()
         preview_doc_exist = True
         try:
