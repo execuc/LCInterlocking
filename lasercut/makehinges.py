@@ -39,7 +39,8 @@ def complete_hinges_properties(hinge):
     #print "seg2 " +str(seg_face_2)
 
     diff_length_test = compare_value(intersection_point.sub(seg_face_1.B).Length,
-                                     intersection_point.sub(seg_face_2.B).Length)
+                                     intersection_point.sub(seg_face_2.B).Length,
+                                     10e-3)
     if diff_length_test is False :
         raise ValueError("Not an arc %f %f" %(intersection_point.sub(seg_face_1.B).Length, intersection_point.sub(seg_face_2.B).Length))
     inner_arc_radius = intersection_point.sub(seg_face_1.B).Length
