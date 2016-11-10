@@ -294,12 +294,30 @@ def create_hole_hinge(hinge_clearance, hinge_length, thickness, kerf_diameter):
         hinge = Part.makeBox(hinge_width, box_length, height, FreeCAD.Vector(-hinge_width/2.0, -box_length/2.0, -height/2.0))
     else:
         box_length = hinge_length - hinge_width - kerf_diameter # hinge_width is for the two corner radius
-        hinge = Part.makeBox(hinge_width, box_length, height, FreeCAD.Vector(-hinge_width / 2.0, -box_length / 2.0, -height / 2.0))
-        first_cylinder = Part.makeCylinder(hinge_width / 2.0, height, FreeCAD.Vector(0, -box_length / 2.0, -height / 2.0), FreeCAD.Vector(0., 0., 1.))
-        second_cylinder = Part.makeCylinder(hinge_width / 2.0, height, FreeCAD.Vector(0, +box_length / 2.0, -height / 2.0), FreeCAD.Vector(0., 0., 1.))
-        hinge = hinge.fuse(first_cylinder)
-        hinge = hinge.fuse(second_cylinder)
+        hinge = draw_rounded_hinge(hinge_width, box_length, height)
 
+    return hinge
+
+
+def draw_rounded_hinge(hinge_width, hinge_length, height):
+    half_w = hinge_width/2.0
+    half_l = hinge_length/2.0
+    half_h = height / 2.0
+    z_plane = -half_h
+    v1 = FreeCAD.Vector(-half_w, -half_l, z_plane)
+    v2 = FreeCAD.Vector(-half_w, half_l, z_plane)
+    v3 = FreeCAD.Vector(half_w, half_l, z_plane)
+    v4 = FreeCAD.Vector(half_w, -half_l, z_plane)
+    vc1 = FreeCAD.Vector(0, -(half_l + half_w), z_plane)
+    vc2 = FreeCAD.Vector(0, half_l+half_w, z_plane)
+    c1 = Part.Arc(v1, vc1, v4)
+    c2 = Part.Arc(v2, vc2, v3)
+    l1 = Part.Line(v1, v2)
+    l2 = Part.Line(v3, v4)
+    cont = Part.Shape([c1, c2, l1, l2])
+    wire=Part.Wire(cont.Edges)
+    hinge = wire.extrude(FreeCAD.Vector(0.0, 0.0, height))
+    hinge = Part.makeSolid(hinge)
     return hinge
 
 
