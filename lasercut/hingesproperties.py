@@ -104,7 +104,7 @@ class GlobalLivingMaterialProperties(helper.ObjectProperties):
         if not hasattr(self, 'hinge_type'):
             self.hinge_type = self.HINGE_TYPE_ALTERNATE_DOUBLE
         if not hasattr(self, 'alternate_nb_hinge'):
-            self.alternate_nb_hinge = int(1)
+            self.alternate_nb_hinge = int(2)
         if not hasattr(self, 'occupancy_ratio'):
             self.occupancy_ratio = 0.8
 

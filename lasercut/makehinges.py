@@ -317,16 +317,8 @@ def draw_rounded_hinge(hinge_width, hinge_length, height):
     cont = Part.Shape([c1, c2, l1, l2])
     wire=Part.Wire(cont.Edges)
     hinge = wire.extrude(FreeCAD.Vector(0.0, 0.0, height))
-    hinge = Part.makeSolid(hinge)
-    return hinge
-
-
-def get_hole_length_space_from_number(nb_holes_by_column, y_length, length_ratio):
-    nb_holes_by_column = int(nb_holes_by_column)
-    hole_length = (y_length * length_ratio) / nb_holes_by_column
-    hole_space = y_length * (1. - length_ratio) / nb_holes_by_column
-
-    return hole_length, hole_space
+    hinge_solid = Part.makeSolid(hinge)
+    return hinge_solid
 
 
 def make_hinges(hinge_properties, global_hinges_properties, referentiel_face):
@@ -337,10 +329,10 @@ def make_hinges(hinge_properties, global_hinges_properties, referentiel_face):
     length_ratio = global_hinges_properties.occupancy_ratio
 
     nb_holes_by_column = int(global_hinges_properties.alternate_nb_hinge)
-    hole_length, hole_space = get_hole_length_space_from_number(nb_holes_by_column, y_length, length_ratio)
+    hole_length = (y_length * length_ratio) / float(nb_holes_by_column)
+    hole_space = y_length * (1. - length_ratio) /float(nb_holes_by_column + 1)
     y_pos_list = get_hinges_y_positions(nb_holes_by_column, hole_length, hole_space)
     nb_holes_by_column = int(nb_holes_by_column + 1)
-    hole_length, hole_space = get_hole_length_space_from_number(nb_holes_by_column, y_length, length_ratio)
     y_pos_list_2 = get_hinges_y_positions(nb_holes_by_column, hole_length, hole_space)
 
     index = 0
