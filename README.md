@@ -1,7 +1,7 @@
 LCInterlocking
 ==========
 
-Experimental module for FreeCAD 0.16.
+Experimental module for FreeCAD 0.16 and 0.17.
 It is not reliable, you have to check parts before doing the laser cut, don't trust it !
 
 Interlocking demonstration : https://youtu.be/YGFIdLpdWXE
@@ -19,6 +19,11 @@ A second feature rotate every pieces that belong to the same plane and uses the 
 The contours of parts may be exported to svg format.
 
 
+Install Notes
+--------------------
+Download the repository as zip via the button on this website or clone via the command line using #git clone https://github.com/execuc/LCInterlocking .
+After download the module must be moved to subfolder mod of the Freecad install directory. On Ubuntu 16.04 move the module to /usr/share/freecad-daily/Mod/. In Windows it will probably be something like C:\Program Files\FreeCAD\Mod. 
+If you now restart Freecad, the program will detect the installed module.
 
 Box generator
 --------------------
@@ -27,6 +32,8 @@ be defined with the interlocking tool.
 
 Demonstration : https://www.youtube.com/watch?v=wuu_lRsXGd0
 
+Description: The user creates a new document and herafter selects the new work bench "laser cut interlocking".
+A box is created by clicking the button with tooltip "create a box without tab". The final box is created with the default dimensions. The exceptions are; width is 53 mm and not 50 mm, outside measure checkbox is unchecked instead checked and the thickness is 4 mm instead of 3 mm. The box is used in some other tutorials.
 
 
 Rounded box generator
