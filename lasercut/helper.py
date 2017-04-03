@@ -244,9 +244,9 @@ def sort_quad_vertex(list_edges, reverse):
         vertex1 = edge.Vertexes[0].Point
         vertex2 = edge.Vertexes[1].Point
 
-        if vertex1 == list_points[-1]:
+        if compare_freecad_vector(vertex1, list_points[-1]):
             list_points.append(vertex2)
-        elif vertex2 == list_points[-1]:
+        elif compare_freecad_vector(vertex2, list_points[-1]):
             list_points.append(vertex1)
         else:
             return None
