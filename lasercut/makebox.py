@@ -238,13 +238,7 @@ def make_z_panel(length, width, thickness, z_pos):
     p3 = FreeCAD.Vector(half_length, half_width, z_pos)
     p4 = FreeCAD.Vector(half_length, -half_width, z_pos)
 
-    l1 = Part.Line(p1, p2)
-    l2 = Part.Line(p2, p3)
-    l3 = Part.Line(p3, p4)
-    l4 = Part.Line(p4, p1)
-
-    shape = Part.Shape([l1, l2, l3, l4])
-    wire = Part.Wire(shape.Edges)
+    wire = Part.makePolygon([p1,p2,p3,p4,p1])
     face = Part.Face(wire)
     part = face.extrude(FreeCAD.Vector(0, 0, thickness))
     return part
@@ -261,13 +255,7 @@ def make_front_panels(length, height, thickness, spacing):
     p3 = FreeCAD.Vector(half_length, y, up_height)
     p4 = FreeCAD.Vector(half_length, y, down_height)
 
-    l1 = Part.Line(p1, p2)
-    l2 = Part.Line(p2, p3)
-    l3 = Part.Line(p3, p4)
-    l4 = Part.Line(p4, p1)
-
-    shape = Part.Shape([l1, l2, l3, l4])
-    wire = Part.Wire(shape.Edges)
+    wire=Part.makePolygon([p1,p2,p3,p4,p1])
     face = Part.Face(wire)
     front_part = face.extrude(FreeCAD.Vector(0, thickness, 0))
     behind_part = front_part.copy()
@@ -286,13 +274,7 @@ def make_twice_half_front_panel(length, height, thickness, spacing):
     p3 = FreeCAD.Vector(quarter_length, y, up_height)
     p4 = FreeCAD.Vector(quarter_length, y, down_height)
 
-    l1 = Part.Line(p1, p2)
-    l2 = Part.Line(p2, p3)
-    l3 = Part.Line(p3, p4)
-    l4 = Part.Line(p4, p1)
-
-    shape = Part.Shape([l1, l2, l3, l4])
-    wire = Part.Wire(shape.Edges)
+    wire = Part.makePolygon([p1,p2,p3,p4,p1])
     face = Part.Face(wire)
     front_part_1 = face.extrude(FreeCAD.Vector(0, thickness, 0))
     front_part_2 = front_part_1.copy()
@@ -312,13 +294,7 @@ def make_side_panels(width, height, thickness, spacing):
     p3 = FreeCAD.Vector(x, half_width, up_height)
     p4 = FreeCAD.Vector(x, half_width, down_height)
 
-    l1 = Part.Line(p1, p2)
-    l2 = Part.Line(p2, p3)
-    l3 = Part.Line(p3, p4)
-    l4 = Part.Line(p4, p1)
-
-    shape = Part.Shape([l1, l2, l3, l4])
-    wire = Part.Wire(shape.Edges)
+    wire = Part.makePolygon([p1,p2,p3,p4,p1])
     face = Part.Face(wire)
     left_part = face.extrude(FreeCAD.Vector(thickness, 0, 0))
     right_part = left_part.copy()
