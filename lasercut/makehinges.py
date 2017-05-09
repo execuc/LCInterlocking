@@ -77,12 +77,11 @@ def create_solid_corner(hinge):
     inner_arc_point = hinge.arc_middle_segment.B
     outter_arc_point = hinge.arc_middle_segment.A
 
-    l1 = Part.Line(hinge.seg_face_1.A, hinge.seg_face_1.B)
-    a2 = Part.Arc(hinge.seg_face_1.B, inner_arc_point, hinge.seg_face_2.B)
-    l3 = Part.Line(hinge.seg_face_2.B, hinge.seg_face_2.A)
-    a4 = Part.Arc(hinge.seg_face_2.A, outter_arc_point, hinge.seg_face_1.A)
-    shape = Part.Shape([l1, a2, l3, a4])
-    wire = Part.Wire(shape.Edges)
+    l1 = Part.makeLine(hinge.seg_face_1.A, hinge.seg_face_1.B)
+    a2 = Part.Arc(hinge.seg_face_1.B, inner_arc_point, hinge.seg_face_2.B).toShape()
+    l3 = Part.makeLine(hinge.seg_face_2.B, hinge.seg_face_2.A)
+    a4 = Part.Arc(hinge.seg_face_2.A, outter_arc_point, hinge.seg_face_1.A).toShape()
+    wire = Part.Wire([l1, a2, l3, a4])
     face = Part.Face(wire)
 
     hinge.solid = face.extrude(hinge.extrustion_vector)
@@ -310,12 +309,11 @@ def draw_rounded_hinge(hinge_width, hinge_length, height):
     v4 = FreeCAD.Vector(half_w, -half_l, z_plane)
     vc1 = FreeCAD.Vector(0, -(half_l + half_w), z_plane)
     vc2 = FreeCAD.Vector(0, half_l+half_w, z_plane)
-    c1 = Part.Arc(v1, vc1, v4)
-    c2 = Part.Arc(v2, vc2, v3)
-    l1 = Part.Line(v1, v2)
-    l2 = Part.Line(v3, v4)
-    cont = Part.Shape([c1, c2, l1, l2])
-    wire=Part.Wire(cont.Edges)
+    c1 = Part.Arc(v1, vc1, v4).toShape()
+    c2 = Part.Arc(v2, vc2, v3).toShape()
+    l1 = Part.makeLine(v1, v2)
+    l2 = Part.makeLine(v3, v4)
+    wire = Part.Wire([c1, l1, c2, l2])
     hinge = wire.extrude(FreeCAD.Vector(0.0, 0.0, height))
     hinge_solid = Part.makeSolid(hinge)
     return hinge_solid

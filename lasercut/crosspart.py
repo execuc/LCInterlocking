@@ -56,12 +56,11 @@ def make_cross_box(length, width, height, node_type, node_thickness):
     p3 = FreeCAD.Vector(-half_length, 0, -height)
     p4 = FreeCAD.Vector(half_length, 0, -height)
 
-    l1 = Part.Line(p1, p2)
-    l2 = Part.Line(p2, p3)
-    l3 = Part.Line(p3, p4)
-    l4 = Part.Line(p4, p1)
-    shape = Part.Shape([l1, l2, l3, l4])
-    wire = Part.Wire(shape.Edges)
+    l1 = Part.makeLine(p1, p2)
+    l2 = Part.makeLine(p2, p3)
+    l3 = Part.makeLine(p3, p4)
+    l4 = Part.makeLine(p4, p1)
+    wire = Part.Wire([l1,l2,l3,l4])
     face = Part.Face(wire)
     face.translate(FreeCAD.Vector(0, -width / 2.0, 0))
     part = face.extrude(FreeCAD.Vector(0, width, 0))
@@ -105,10 +104,9 @@ def make_node_xz(width, height, thickness,  x_positive = True):
     else:
         pa = FreeCAD.Vector(-width, -thickness/2.0, 0.)
 
-    l1 = Part.Line(p1, p2)
-    a2 = Part.Arc(p2, pa, p1)
-    shape = Part.Shape([l1, a2])
-    wire = Part.Wire(shape.Edges)
+    l1 = Part.makeLine(p1, p2)
+    a2 = Part.Arc(p2, pa, p1).toShape()
+    wire = Part.Wire([l1, a2])
     face = Part.Face(wire)
     node = face.extrude(FreeCAD.Vector(0, thickness, 0))
 
@@ -124,10 +122,9 @@ def make_node_yz(width, height, thickness,  x_positive = True):
     else:
         pa = FreeCAD.Vector(-thickness/2.0, -width, 0.)
 
-    l1 = Part.Line(p1, p2)
-    a2 = Part.Arc(p2, pa, p1)
-    shape = Part.Shape([l1, a2])
-    wire = Part.Wire(shape.Edges)
+    l1 = Part.makeLine(p1, p2)
+    a2 = Part.Arc(p2, pa, p1).toShape()
+    wire = Part.Wire([l1, a2])
     face = Part.Face(wire)
     node = face.extrude(FreeCAD.Vector(thickness, 0, 0))
 
@@ -337,6 +334,7 @@ def make_cross_parts(parts):
         second_shape = second_part.properties.freecad_object.Shape
         intersect_shape = first_shape.common(second_shape)
         if intersect_shape.Volume > 0.001:
+            #Part.show(intersect_shape)
             sorted_areas_by_normals = helper.sort_area_shape_faces(intersect_shape)
             str_parts_name = first_part.get_name() + " -> " + second_part.get_name()
             if len(sorted_areas_by_normals) != 3:

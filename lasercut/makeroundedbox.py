@@ -141,15 +141,15 @@ def create_sides(polygon_segment, height, nb_cut):
 
 
 def create_shape(p1, p2, p3, p4):
-    l1 = Part.Line(p1, p2)
-    l2 = Part.Line(p2, p3)
-    l3 = Part.Line(p3, p4)
-    l4 = Part.Line(p4, p1)
+    l1 = Part.makeLine(p1, p2)
+    l2 = Part.makeLine(p2, p3)
+    l3 = Part.makeLine(p3, p4)
+    l4 = Part.makeLine(p4, p1)
 
-    shape = Part.Shape([l1, l2, l3, l4])
-    wire = Part.Wire(shape.Edges)
+    wire = Part.Wire([l1, l2, l3, l4])
     face = Part.Face(wire)
     return face
+
 
 def retrieve_segments_arc(polygon_segment):
     arcs_segment_list = []
@@ -187,11 +187,11 @@ def get_contours_with_arc(edge, arcs_segment_list):
         second_segment = edge[index][1]
         last_segment = edge[(index + 1) % nb_face][0]
 
-        outer_contours.append(Part.Line(first_segment.A, second_segment.A))
-        inner_contours.append(Part.Line(first_segment.B, second_segment.B))
+        outer_contours.append(Part.makeLine(first_segment.A, second_segment.A))
+        inner_contours.append(Part.makeLine(first_segment.B, second_segment.B))
 
-        outer_contours.append(Part.Arc(second_segment.A, arcs_segment_list[index].A, last_segment.A))
-        inner_contours.append(Part.Arc(second_segment.B, arcs_segment_list[index].B, last_segment.B))
+        outer_contours.append(Part.Arc(second_segment.A, arcs_segment_list[index].A, last_segment.A).toShape())
+        inner_contours.append(Part.Arc(second_segment.B, arcs_segment_list[index].B, last_segment.B).toShape())
 
     return inner_contours, outer_contours
 
@@ -209,11 +209,11 @@ def create_plane_part(dimension_properties, plane_properties):
     inner_contours, outer_contours = get_contours_with_arc(edge, arcs_segment_list)
 
     if plane_properties.position == TopBottomRoundedProperties.POSITION_INSIDE:
-        shape = Part.Shape(inner_contours)
+        wire=Part.Wire(inner_contours)
     else:
-        shape = Part.Shape(outer_contours)
+        wire=Part.Wire(outer_contours)
 
-    wire = Part.Wire(shape.Edges)
     face = Part.Face(wire)
     part = face.extrude(FreeCAD.Vector(0, 0, dimension_properties.thickness))
     return part
+
