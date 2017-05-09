@@ -24,19 +24,26 @@
 # ***************************************************************************
 
 from PySide import QtGui
+
 from lasercut.tabproperties import TabProperties
 from toolwidget import ParamWidget, WidgetValue
 import copy
 
 
 class BaseTabWidget(ParamWidget):
+    __count = 0
+
+    @classmethod
+    def _count(cls):
+        BaseTabWidget.__count += 1
+        return BaseTabWidget.__count
 
     def __init__(self, cad_face, cad_object, name, t_type):
         self.name = "%s.%s" % (cad_object.Name, name)
         self.description = "%s.%s (%s)" % (cad_object.Name, name, t_type)
         self.real_name = name
         tab_properties = TabProperties(freecad_object=cad_object, freecad_face=cad_face, tab_type=t_type,
-                                       name=self.name, real_name=self.real_name)
+                                       name=self.name, real_name=self.real_name, group_id=self._count())
         ParamWidget.__init__(self, tab_properties)
         self.widget_list.extend([WidgetValue(type=float, name="y_length", show_name="Width", widget=None),
                                  WidgetValue(type=float, name="thickness", show_name="Thickness", widget=None),

@@ -266,13 +266,23 @@ def make_tabs_joins(parts, tabs):
         mat_element = helper.MaterialElement(part)
         parts_element.append(mat_element)
 
+    removeParts = {}
+    #test to improve speed
+    for tab in tabs:
+        keyid = str(tab.group_id)
+        if keyid not in removeParts:
+            removeParts[keyid] = []
+        removeParts[keyid].append(tab.freecad_object.Name)
+
     for tab in tabs:
         tab_part = None
         other_parts = []
+        keyid = str(tab.group_id)
         for part in parts_element:
             if part.get_name() == tab.freecad_object.Name:
                 tab_part = part
-            else:
+#            else:
+            elif part.get_name() not in removeParts[keyid]:
                 other_parts.append(part)
         if tab.tab_type == TabProperties.TYPE_TAB:
             make_tab_join(tab, tab_part, other_parts)

@@ -36,7 +36,8 @@ class TabProperties(helper.ObjectProperties):
 
     _allowed = ('name', 'real_name', 'y_length', 'thickness', 'tabs_width', 'tabs_number', 'tabs_shift',
                 'dog_bone', 'tab_dog_bone', 'screw_diameter', 'screw_length', 'screw_length_tol', 'makeScrew',
-                'y_invert', 'half_tab_ratio', 'interval_ratio', 'freecad_face', 'freecad_object', 'tab_type')
+                'y_invert', 'half_tab_ratio', 'interval_ratio', 'freecad_face', 'freecad_object', 'tab_type',
+                'group_id')
 
     def __init__(self, **kwargs):
         super(TabProperties, self).__init__(**kwargs)
@@ -75,4 +76,6 @@ class TabProperties(helper.ObjectProperties):
             self.tab_dog_bone = False
         if not hasattr(self, 'y_invert'):
             self.y_invert = False
+        if not hasattr(self, 'group_id'):
+            self.group_id = -1
 
