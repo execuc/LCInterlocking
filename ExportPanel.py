@@ -107,7 +107,9 @@ class ExportCommand:
                 x_pos = 0
 
             new_parts_list.append(new_part)
-            Draft.makeShape2DView(new_part)
+
+        for tmppart in new_parts_list:
+            Draft.makeShape2DView(tmppart)
 
         freecad_document.recompute()
 
