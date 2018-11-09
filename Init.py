@@ -23,4 +23,4 @@
 # *                                                                         *
 # ***************************************************************************
 
-print "Interlocking laser cut workbench loaded"
+print("Interlocking laser cut workbench loaded")
