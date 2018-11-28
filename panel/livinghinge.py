@@ -132,7 +132,7 @@ class LivingHinges:
         else:
             return self.connection_widget_list[-1].properties().freecad_object_2
 
-    def add_connection(self):
+    def add_connection(self,reversed_angle=False):
         faces_list = selection.get_freecad_faces_objects_list()
         if len(faces_list) == 0 or len(faces_list) % 2 == 1:
             raise ValueError("Please select at least two faces (multiple of two)")
@@ -146,7 +146,8 @@ class LivingHinges:
                 raise ValueError("Please select a face belonging to the last part")
 
             widget = LivingHingeWidget(face_1['face'], face_1['freecad_object'],
-                                       face_2['face'], face_2['freecad_object'])
+                                       face_2['face'], face_2['freecad_object'],
+                                       reversed_angle=reversed_angle)
 
             link_clearance = self.global_properties.get_properties().link_clearance
             if link_clearance != 0.:
@@ -154,6 +155,9 @@ class LivingHinges:
             self.connection_widget_list.append(widget)
         self.draw_connections()
         return
+
+    def add_rev_connection(self):
+	return self.add_connection(reversed_angle=True)
 
     def update_connection_from_global_parameters(self, value):
         self.draw_connections()
