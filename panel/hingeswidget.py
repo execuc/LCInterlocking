@@ -57,15 +57,16 @@ class GlobalLivingHingeWidget(ParamWidget):
 
 class LivingHingeWidget(ParamWidget):
 
-    def __init__(self, first_freecad_face, first_freecad_object, second_freecad_face, second_freecad_object):
+    def __init__(self, first_freecad_face, first_freecad_object, second_freecad_face, second_freecad_object, reversed_angle):
         material = HingesProperties(freecad_face_1 = first_freecad_face, freecad_object_1 = first_freecad_object,
-                                    freecad_face_2 = second_freecad_face, freecad_object_2 = second_freecad_object)
+                                    freecad_face_2 = second_freecad_face, freecad_object_2 = second_freecad_object, reversed_angle=reversed_angle)
         self.name = material.name
         ParamWidget.__init__(self, material)
 
         self.widget_list.extend([WidgetValue(type=float, name="arc_inner_radius", show_name="Arc radius (inner)", widget=None),
                                  WidgetValue(type=float, name="arc_outer_radius", show_name="Arc radius (outer)", widget=None),
                                  WidgetValue(type=float, name="arc_length", show_name="Arc length", widget=None),
+                                 WidgetValue(type=bool, name="reversed_angle", show_name="Reverse Angle", widget=None),
                                  WidgetValue(type=float, name="deg_angle", show_name="Angle (degree)", widget=None),
                                  WidgetValue(type=float, name="min_links_nb", show_name="Min. link", widget=None),
                                  WidgetValue(type=float, name="nb_link", show_name="Number link",

@@ -53,18 +53,26 @@ def complete_hinges_properties(hinge):
     dir_mid_point.normalize()
 
     inner_arc_point = dir_mid_point * inner_arc_radius
-    inner_arc_point = inner_arc_point.add(intersection_point)
     outter_arc_point = dir_mid_point * outer_arc_radius
-    outter_arc_point = outter_arc_point.add(intersection_point)
+    if hinge.reversed_angle:
+        inner_arc_point = intersection_point.sub(inner_arc_point)
+        outter_arc_point = intersection_point.sub(outter_arc_point)
+    else:    
+        inner_arc_point = inner_arc_point.add(intersection_point)
+    	outter_arc_point = outter_arc_point.add(intersection_point)
     arc_middle_segment = Segment(outter_arc_point, inner_arc_point)
-
+    
     hinge.seg_face_1 = seg_face_1
     hinge.seg_face_2 = seg_face_2
     hinge.arc_middle_segment = arc_middle_segment
     hinge.extrustion_vector = extrusion_vector
     hinge.rad_angle = seg_face_1.get_angle(seg_face_2)
-    hinge.deg_angle = hinge.rad_angle * 180. / math.pi
+    if hinge.reversed_angle:
+        hinge.rad_angle= math.pi*2 - hinge.rad_angle
+    hinge.deg_angle = hinge.rad_angle * 180. / math.pi 
     hinge.rotation_vector = seg_face_1.vector().cross(seg_face_2.vector())
+    if hinge.reversed_angle:
+        hinge.rotation_vector*=-1
     hinge.arc_length = mid_arc_radius * hinge.rad_angle
     hinge.arc_inner_radius = inner_arc_radius
     hinge.arc_outer_radius = outer_arc_radius

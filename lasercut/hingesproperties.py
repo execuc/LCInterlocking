@@ -35,7 +35,7 @@ class HingesProperties(helper.ObjectProperties):
     _allowed = ('freecad_face_1', 'freecad_object_1', 'freecad_face_2', 'freecad_object_2', 'name',
                 'seg_face_1', 'seg_face_2', 'extrustion_vector', 'rad_angle', 'deg_angle', 'rotation_vector'
                 'arc_length', 'arc_inner_radius', 'arc_outer_radius',
-                'min_links_nb', 'nb_link', 'thickness')
+                'min_links_nb', 'nb_link', 'thickness', 'reversed_angle')
 
     def __init__(self, **kwargs):
         super(HingesProperties, self).__init__(**kwargs)
@@ -45,7 +45,6 @@ class HingesProperties(helper.ObjectProperties):
             raise ValueError("Must defined freecad face/object")
         if not hasattr(self, 'name'):
             self.name = self.freecad_object_1.Label + " -> " + self.freecad_object_2.Label
-
         self.arc_length = None
         self.extrustion_vector = None
         self.solid = None
