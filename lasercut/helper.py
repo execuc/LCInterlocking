@@ -280,21 +280,24 @@ def sort_area_shape_list(faces_list):
 def sort_area_face_common(faces, test_function=compare_freecad_vector_direction):
     normal_area_list = []
     for face in faces:
-        # print face
-        normal = face.normalAt(0, 0)
-        # print normal
-        found = False
-        for i in range(len(normal_area_list)):
-            normal_test = normal_area_list[i][0]
-            if test_function(normal, normal_test):
-                found = True
-                normal_area_list[i][1] += face.Area
-                normal_area_list[i][2].append(face)
-                tmp = sorted(normal_area_list[i][2], key=attrgetter('Area'),  reverse=True)
-                normal_area_list[i][2] = tmp
-                break
-        if not found:
-            normal_area_list.append([normal, face.Area, [face]])
+        try:
+            # print face
+            normal = face.normalAt(0, 0)
+            # print normal
+            found = False
+            for i in range(len(normal_area_list)):
+                normal_test = normal_area_list[i][0]
+                if test_function(normal, normal_test):
+                    found = True
+                    normal_area_list[i][1] += face.Area
+                    normal_area_list[i][2].append(face)
+                    tmp = sorted(normal_area_list[i][2], key=attrgetter('Area'),  reverse=True)
+                    normal_area_list[i][2] = tmp
+                    break
+            if not found:
+                normal_area_list.append([normal, face.Area, [face]])
+        except Exception as ex:
+            FreeCAD.Console.PrintError("Something wrong with face ", face, " : ", ex)
     # print normal_area_list
     sorted_list = sorted(normal_area_list, key=itemgetter(1))
     return sorted_list
