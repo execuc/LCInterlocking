@@ -26,11 +26,11 @@
 import Part
 import FreeCAD
 import math
-from helper import transform, compare_freecad_vector, compare_value, Segment, assemble_list_element
+from lasercut.helper import transform, compare_freecad_vector, compare_value, Segment, assemble_list_element
 
 
-def complete_hinges_properties(hinge):
-    edge1, edge2, extrusion_vector = get_coplanar_edge(hinge.freecad_face_1, hinge.freecad_face_2)
+def complete_hinges_properties(hinge, face_1, face_2, storeAll = False):
+    edge1, edge2, extrusion_vector = get_coplanar_edge(face_1, face_2)
     seg_face_1, seg_face_2 = get_segment_from_edge(edge1, edge2)
     intersection_point = do_intersection(seg_face_1,seg_face_2)
 
@@ -59,7 +59,7 @@ def complete_hinges_properties(hinge):
         outter_arc_point = intersection_point.sub(outter_arc_point)
     else:    
         inner_arc_point = inner_arc_point.add(intersection_point)
-    	outter_arc_point = outter_arc_point.add(intersection_point)
+        outter_arc_point = outter_arc_point.add(intersection_point)
     arc_middle_segment = Segment(outter_arc_point, inner_arc_point)
     
     hinge.seg_face_1 = seg_face_1
@@ -77,6 +77,13 @@ def complete_hinges_properties(hinge):
     hinge.arc_inner_radius = inner_arc_radius
     hinge.arc_outer_radius = outer_arc_radius
     hinge.thickness = seg_face_1.length()
+
+    if storeAll is False:
+        hinge.arc_middle_segment = None
+        hinge.extrustion_vector = None
+        hinge.seg_face_1 = None
+        hinge.seg_face_2 = None
+        hinge.rotation_vector = None
 
     return True
 

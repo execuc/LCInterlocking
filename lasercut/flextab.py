@@ -25,7 +25,7 @@
 
 import Part
 import FreeCAD
-import helper
+import lasercut.helper as helper
 import math
 
 

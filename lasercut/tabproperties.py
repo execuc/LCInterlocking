@@ -33,25 +33,43 @@ class TabProperties(helper.ObjectProperties):
     TYPE_T_SLOT = 'Screw'
     TYPE_CONTINUOUS = 'Continuous'
     TYPE_FLEX = 'Flexible'
+    TYPE_NOT_DEFINED = 'Not Defined'
 
-    _allowed = ('name', 'real_name', 'y_length', 'thickness', 'tabs_width', 'tabs_number', 'tabs_shift',
+    _allowed = ('face_name', 'y_length', 'thickness', 'tabs_width', 'tabs_number', 'tabs_shift',
                 'dog_bone', 'tab_dog_bone', 'screw_diameter', 'screw_length', 'screw_length_tol', 'makeScrew',
-                'y_invert', 'half_tab_ratio', 'interval_ratio', 'freecad_face', 'freecad_object', 'tab_type',
-                'group_id')
+                'y_invert', 'half_tab_ratio', 'interval_ratio', 'freecad_obj_name',
+                'tab_type', 'group_id', 'description', 'link_name', 'tab_name', 'transform_matrix')
+
+    __count = 0
+
+    @classmethod
+    def _count(cls):
+        TabProperties.__count += 1
+        return TabProperties.__count
 
     def __init__(self, **kwargs):
         super(TabProperties, self).__init__(**kwargs)
-        if not hasattr(self, 'freecad_object') or not hasattr(self, 'freecad_face'):
+        self.freecad_object = None
+        self.freecad_face = None
+        self.transform_matrix = None
+        if not kwargs['freecad_face']:
+            raise ValueError("Must init with freecad face")
+        if not hasattr(self, 'freecad_obj_name') :#or not hasattr(self, 'freecad_face'):
             raise ValueError("Must defined freecad face/object")
         if not hasattr(self, 'tab_type'):
             raise ValueError("no type of tab defined")
+        if not hasattr(self, 'face_name'):
+            #self.face_name = self.freecad_face['name']
+            raise ValueError("name not defined")
+        if not hasattr(self, 'tab_name'):
+            self.tab_name = "%s.%s" % (self.freecad_obj_name, self.face_name)
+        if not hasattr(self, 'description'):
+            self.description = "%s.%s (%s)" % (self.freecad_obj_name, self.face_name, self.tab_type)
         if not hasattr(self, 'y_length') or not hasattr(self, 'thickness') or not hasattr(self, 'transform_matrix'):
             try:
-                x_local, y_length, thickness = helper.get_local_axis(self.freecad_face)
+                x_local, y_length, thickness = helper.get_local_axis(kwargs['freecad_face'])
                 self.thickness = thickness.Length
                 self.y_length = y_length.Length
-                self.transform_matrix = helper.get_matrix_transform(self.freecad_face)
-#                FreeCAD.Console.PrintError("y_length : %f, thickness: %f\n" %(self.thickness, self.y_length))
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
         if not hasattr(self, 'tabs_number'):
@@ -76,6 +94,14 @@ class TabProperties(helper.ObjectProperties):
             self.tab_dog_bone = False
         if not hasattr(self, 'y_invert'):
             self.y_invert = False
-        if not hasattr(self, 'group_id'):
-            self.group_id = -1
+        self.group_id = self._count()
+        if not hasattr(self, 'link_name'):
+            self.link_name = ""
 
+    def recomputeInit(self, freecad_obj, freecad_face):
+        self.freecad_object = freecad_obj
+        self.freecad_face = freecad_face
+        x_local, y_length, thickness = helper.get_local_axis(freecad_face)
+        self.thickness = thickness.Length
+        self.y_length = y_length.Length
+        self.transform_matrix = helper.get_matrix_transform(freecad_face)

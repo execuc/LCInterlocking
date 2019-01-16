@@ -33,9 +33,12 @@ from operator import itemgetter, attrgetter
 # http://stackoverflow.com/questions/2535917/copy-kwargs-to-self
 class ObjectProperties(object):
     def __init__(self, **kwargs):
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
-
+        self.obj_class = str(type(self).__name__)
+        for k, v in kwargs.items():
+            if not hasattr(self, "_allowed") or str(k) in self._allowed:
+                setattr(self, k, v)
+            #else:
+            #    FreeCAD.Console.PrintWarning(str(k) + " is not allowed for " + str(type(self)))
 
 class Segment:
     def __init__(self, first=FreeCAD.Vector(0, 0, 0), second=FreeCAD.Vector(0, 0, 0)):

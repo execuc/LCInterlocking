@@ -25,7 +25,7 @@
 
 
 from PySide import QtCore, QtGui
-
+import FreeCAD
 
 class TreeItem(object):
 

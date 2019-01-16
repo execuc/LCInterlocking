@@ -23,7 +23,7 @@
 # *                                                                         *
 # ***************************************************************************
 
-from helper import ObjectProperties
+from lasercut.helper import ObjectProperties
 import math
 
 

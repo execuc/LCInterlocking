@@ -28,28 +28,30 @@ import FreeCADGui
 from FreeCAD import Gui
 import os, copy
 from PySide import QtCore, QtGui
-from partmat import PartsList, CrossPartWidget
-from tab import TabsList
+from panel.partmat import PartsList, CrossPartWidget, Part
+from panel.tab import TabsList
 from panel import selection
 from lasercut.tabproperties import TabProperties
-from lasercut.join import make_tabs_joins
-from treeview import TreeModel, TreeItem
-
+from panel.treeview import TreeModel, TreeItem
+from panel.propertieslist import PropertiesList
 
 class TreePanel(object):
 
-    def __init__(self, title):
+    def __init__(self, title, obj_join = None): #none to be removed
         self.form = []
-        if title != "Crosspiece":
-            self.partsList = PartsList()
+        self.obj_join = obj_join
+        self.parts = self.obj_join.parts
+        if hasattr(self.obj_join, "faces"):
+            self.faces = self.obj_join.faces
         else:
-            self.partsList = PartsList(CrossPartWidget)
-        self.tabsList = TabsList()
-        self.params_widget = QtGui.QWidget()
-        self.params_widget.setObjectName("ParamsPanel")
-        self.params_widget.setWindowTitle("Parameters")
-        self.params_vbox = QtGui.QVBoxLayout(self.params_widget)
-        self.form.append(self.params_widget)
+            self.faces = PropertiesList()
+
+        self.partsList = PartsList(Part, self.parts)
+        self.tabsList = TabsList(self.faces)
+
+        self.params_widget = None
+        if self.params_widget:
+            self.form.append(self.params_widget)
         self.hide_button = None
         self.show_button = None
         self.reset_transparency_button = None
@@ -75,7 +77,14 @@ class TreePanel(object):
         self.show_other_state_checkbox = None
         self.other_object_list = []
         self.save_initial_objects()
-        self.init_params()
+
+        items_list = self.partsList.resumeWidget()
+        for item in items_list:
+            self.model.append_part(item.name, item.label, bool(item.link_name))
+
+        items_list = self.tabsList.resumeWidget()
+        for item in items_list:
+            self.model.append_tab(item.obj_name, item.tab_name, item.name, bool(item.link_name))
 
     def getStandardButtons(self):
         return int(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
@@ -135,7 +144,7 @@ class TreePanel(object):
             return
         for part in parts:
             try:
-                item = self.partsList.append(part)
+                item, widget = self.partsList.append(part)
                 last_index = self.model.append_part(item.name, item.label)
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
@@ -144,16 +153,16 @@ class TreePanel(object):
 
     def add_same_parts(self):
         self.check_is_in_active_view()
-        parts = selection.get_freecad_objects_list()
+        freecad_parts = selection.get_freecad_objects_list()
         index = None
-        if len(parts) == 0 or not self.check_parts(parts):
+        if len(freecad_parts) == 0 or not self.check_parts(freecad_parts):
             return
         try:
-            item = self.partsList.append(parts[0])
+            item, widget = self.partsList.append(freecad_parts[0])
             index = self.model.append_part(item.name, item.label)
-            for part in parts[1:]:
-                item = self.partsList.append_link(part, parts[0])
-                self.model.append_part(item.name, item.label, True)
+            for part in freecad_parts[1:]:
+                sub_item, sub_widget = self.partsList.append_link(part, freecad_parts[0])
+                self.model.append_part(sub_item.name, sub_item.label, True)
         except ValueError as e:
             FreeCAD.Console.PrintError(e)
             return
@@ -163,14 +172,23 @@ class TreePanel(object):
     def remove_items(self):
         indexes = self.tree_view_widget.selectionModel().selectedIndexes()
         if len(indexes) == 0:
+            FreeCAD.Console.PrintWarning("Nothing to remove\n")
             return
         parent_test_name = indexes[0].internalPointer().parent().get_name()
-        for index in indexes[1:]:
+        for index in indexes:#[1:]:
             if index.internalPointer().parent().get_name() != parent_test_name:
                 FreeCAD.Console.PrintError("No same level delete")
                 return False
             elif index.internalPointer().child_count() > 0:
                 FreeCAD.Console.PrintError("%s has children" % index.internalPointer().get_name())
+                return False
+        for index in indexes:
+            item = index.internalPointer()
+            if item.type == TreeItem.PART and len(self.partsList.get_linked_parts(item.get_name())) > 0:
+                FreeCAD.Console.PrintError('Some parts are linked to this part %s\n' % item.get_name())
+                return False
+            elif item.type == TreeItem.TAB and len(self.tabsList.get_linked_tabs(item.get_name())) > 0:
+                FreeCAD.Console.PrintError('Some tabs are linked to this tab %s\n' % item.get_name())
                 return False
 
         for index in indexes:
@@ -181,10 +199,8 @@ class TreePanel(object):
                 self.tabsList.remove(item.get_name())
             else:
                 FreeCAD.Console.PrintError("Unknown deleter item")
-
         rows = sorted(set(index.row() for index in indexes))
         for row in reversed(rows):
-            #FreeCAD.Console.PrintError("remove row %d" % row)
             self.model.removeRow(row, indexes[0].parent())
 
         return
@@ -207,9 +223,8 @@ class TreePanel(object):
             return
         for face in faces:
             try:
-                item = self.tabsList.append(face['face'], face['freecad_object'], face['name'],
-                                            self.tab_type_box.currentText())
-                last_index = self.model.append_tab(face['freecad_object'].Name, item.name, item.real_name)
+                item, widget = self.tabsList.append(face, self.tab_type_box.currentText())
+                last_index = self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name)
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
                 return
@@ -224,14 +239,11 @@ class TreePanel(object):
             return
         try:
             face = faces[0]
-            item = self.tabsList.append(face['face'], face['freecad_object'], face['name'],
-                                        self.tab_type_box.currentText())
-            index = self.model.append_tab(face['freecad_object'].Name, item.name, item.real_name)
-
+            item, widget = self.tabsList.append(face, self.tab_type_box.currentText())
+            index = self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name)
             for face in faces[1:]:
-                item = self.tabsList.append_link(face['face'], face['freecad_object'], face['name'],
-                                                 "%s.%s" % (faces[0]['freecad_object'].Name, faces[0]['name']))
-                self.model.append_tab(face['freecad_object'].Name, item.name, item.real_name, True)
+                sub_item, sub_widget = self.tabsList.append_link(face, item.tab_name)
+                self.model.append_tab(sub_item.freecad_obj_name, sub_item.tab_name, sub_item.face_name, True)
 
         except ValueError as e:
             FreeCAD.Console.PrintError(e)
@@ -258,22 +270,28 @@ class TreePanel(object):
                 tab_indexes.append(index)
                 continue
             elif item.type == TreeItem.PART or item.type == TreeItem.PART_LINK :
-                part = self.partsList.get(item.get_name())
-                FreeCADGui.Selection.addSelection(part.properties().freecad_object)
-                self.edited_items.append(part)
-                groupx_box, grid = part.get_group_box(self.tree_widget)
+                part, widget = self.partsList.get(item.get_name())
+                fobj = self.active_document.getObject(part.name)
+                FreeCADGui.Selection.addSelection(fobj)
+
+                self.edited_items.append(widget)
+                groupx_box, grid = widget.get_group_box(self.tree_widget)
                 self.edit_items_layout.addWidget(groupx_box)
 
         for index in tab_indexes:
             if index.column() > 0:
                 continue
             item = index.internalPointer()
-            tab = self.tabsList.get(item.get_name())
+            tab, widget = self.tabsList.get(item.get_name())
             if tab is None:
                 raise ValueError("No tab named %s", item.get_name())
-            FreeCADGui.Selection.addSelection(tab.properties().freecad_object, tab.properties().real_name)
-            self.edited_items.append(tab)
-            groupx_box, grid = tab.get_group_box(self.tree_widget)
+            if widget is None:
+                raise ValueError("No widget named %s", item.get_name())
+            fobj = self.active_document.getObject(tab.freecad_obj_name)
+            FreeCADGui.Selection.addSelection(fobj, tab.face_name)
+
+            self.edited_items.append(widget)
+            groupx_box, grid = widget.get_group_box(self.tree_widget)
             self.edit_items_layout.addWidget(groupx_box)
 
     def remove_items_widgets(self):
@@ -291,6 +309,10 @@ class TreePanel(object):
             item.get_properties()
 
     def init_params(self):
+        self.params_widget = QtGui.QWidget()
+        self.params_widget.setObjectName("ParamsPanel")
+        self.params_widget.setWindowTitle("Parameters")
+        self.params_vbox = QtGui.QVBoxLayout(self.params_widget)
         QtGui.QWidget().setLayout(self.params_vbox)
         parts_vbox = QtGui.QGridLayout(self.params_widget)
         self.hide_button = QtGui.QPushButton('Hide others', self.params_widget)
@@ -317,12 +339,6 @@ class TreePanel(object):
     def preview(self):
         raise ValueError("Must overloaded")
 
-    def create_new_parts(self, document, parts):
-        for part in parts:
-            new_shape = document.addObject("Part::Feature", part.get_new_name())
-            new_shape.Shape = part.get_shape()
-        document.recompute()
-
     def save_initial_objects(self):
         self.other_object_list = []
         objs = self.active_document.Objects
@@ -331,14 +347,12 @@ class TreePanel(object):
                 self.other_object_list.append({'obj':obj, 'transparency':copy.copy(obj.ViewObject.Transparency)})
 
     def show_initial_objects(self):
-        FreeCAD.Console.PrintError("\nShow\n")
         for obj in self.other_object_list:
             freecad_object = obj['obj']
             freecad_object.ViewObject.show()
         return
 
     def hide_others(self):
-        FreeCAD.Console.PrintError("Hide others\n")
         current_obj_list = selection.get_freecad_objects_list()
         object_list = []
         if current_obj_list is None or len(current_obj_list) == 0:
@@ -364,3 +378,7 @@ class TreePanel(object):
         if self.active_document != FreeCAD.ActiveDocument:
             raise ValueError("You have to select original document")
         return True
+
+    def save_link_properties(self):
+        self.partsList.get_parts_properties()
+        self.tabsList.get_tabs_properties()

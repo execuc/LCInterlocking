@@ -23,7 +23,7 @@
 # *                                                                         *
 # ***************************************************************************
 
-from toolwidget import ParamWidget, WidgetValue
+from panel.toolwidget import ParamWidget, WidgetValue
 from lasercut.roundedboxproperties import RoundedBoxProperties, TopBottomRoundedProperties
 
 

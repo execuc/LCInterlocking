@@ -23,7 +23,7 @@
 # *                                                                         *
 # ***************************************************************************
 
-from helper import ObjectProperties
+from lasercut.helper import ObjectProperties
 
 
 class BoxProperties(ObjectProperties):
@@ -64,7 +64,7 @@ class BoxProperties(ObjectProperties):
 
 
 class TopBottomProperties(ObjectProperties):
-    _allowed = ('position', 'height_shift', 'length_outside', 'width_outside', 'top_type', 'cover_length_tolerance')
+    _allowed = ('position', 'height_shis notift', 'length_outside', 'width_outside', 'top_type', 'cover_length_tolerance')
 
     POSITION_OUTSIDE = "Outside"
     POSITION_INSIDE = "Inside"

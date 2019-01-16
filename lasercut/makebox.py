@@ -27,7 +27,7 @@ from FreeCAD import Gui
 import FreeCAD
 import FreeCADGui
 import Part
-from boxproperties import BoxProperties, TopBottomProperties
+from lasercut.boxproperties import BoxProperties, TopBottomProperties
 
 
 def make_box(dimension_properties, top_properties, bottom_properties):

@@ -30,17 +30,92 @@ import Part
 import os
 import math
 import Draft
-from panel.box import BoxProperties, DimensionBoxParam, LengthWidthBoxParam, BottomBoxParam, TopBoxParam
+import copy
+from panel.box import BoxProperties, TopBottomProperties, DimensionBoxParam, LengthWidthBoxParam, BottomBoxParam, TopBoxParam
 from lasercut import makebox
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, 'icons')
 from PySide import QtCore, QtGui
 
+class GroupBox:
+    def __init__(self, obj):
+        obj.addProperty("App::PropertyPythonObject", "box_properties").box_properties = BoxProperties()  # supported  https://www.freecadweb.org/wiki/Scripted_objects
+        obj.addProperty("App::PropertyPythonObject", "top_properties").top_properties = TopBottomProperties()
+        obj.addProperty("App::PropertyPythonObject", "bottom_properties").bottom_properties = TopBottomProperties()
+        obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
+        obj.addProperty('App::PropertyLinkList', 'parts').parts = []
+        obj.Proxy = self
+
+    def onChanged(self, fp, prop):
+        if prop == "recompute":
+            self.execute(fp)
+
+    def execute(self, fp):
+        if fp.recompute:
+            fp.recompute = False
+
+            document = fp.Document
+            computed_parts = makebox.make_box(fp.box_properties, fp.top_properties, fp.bottom_properties)
+
+            object_list = fp.parts
+            if len(computed_parts) != len(object_list):
+                for part in object_list:
+                    document.removeObject(part.Name)
+
+                object_list = []
+                for part in computed_parts:
+                    new_shape = document.addObject("Part::Feature", part['name'])
+                    object_list.append(new_shape)
+
+            for index in range(len(computed_parts)):
+                object_list[index].Shape = computed_parts[index]['shape']
+
+            fp.parts = object_list
+            FreeCADGui.getDocument(document.Name).ActiveView.fitAll()
+            document.recompute()
+
+
+class ViewProviderGroupBox: # self PythonFeatureViewProvider
+    def __init__(self, vobj): # vobj = ViewProviderPythonFeature
+        vobj.Proxy = self
+
+    def setEdit(self, vobj=None, mode=0):
+        if mode == 0:
+            FreeCADGui.Control.showDialog(MakeBox(self.Object))
+            return True
+
+    def setupContextMenu(self, obj, menu):
+        action = menu.addAction("Edit")
+        action.triggered.connect(self.setEdit)
+
+    def onChanged(self, vp, prop):
+        pass
+
+    def __getstate__(self):
+        ''' When saving the document this object gets stored using Python's cPickle module.
+        Since we have some un-pickable here -- the Coin stuff -- we must define this method
+        to return a tuple of all pickable objects or None.
+        '''
+        return None
+
+    def __setstate__(self, state):
+        ''' When restoring the pickled object from document we have the chance to set some
+        internals here. Since no data were pickled nothing needs to be done here.
+        '''
+        return None
+
+    def attach(self, vobj):
+        self.ViewObject = vobj
+        self.Object = vobj.Object
+
+    def claimChildren(self):
+        return self.Object.parts
+
 
 class MakeBox:
 
-    def __init__(self):
+    def __init__(self, obj_box):
         self.form = []
         self.main_widget = QtGui.QWidget()
         self.main_widget.setWindowTitle("Make box")
@@ -51,11 +126,15 @@ class MakeBox:
         self.parts_vbox.addWidget(self.preview_button, 0, 0, 1, 2)
         self.preview_button.clicked.connect(self.preview)
 
-        self.box_properties = BoxProperties()
-        self.dim_box_param = DimensionBoxParam(self.box_properties)
-        self.general_box_param = LengthWidthBoxParam(self.box_properties)
-        self.bottom_box_param = BottomBoxParam()
-        self.top_box_param = TopBoxParam()
+        self.obj_box = obj_box
+        self.box_properties_origin = copy.deepcopy(self.obj_box.box_properties)
+        self.bottom_properties_origin = copy.deepcopy(self.obj_box.bottom_properties)
+        self.top_properties_origin = copy.deepcopy(self.obj_box.top_properties)
+
+        self.dim_box_param = DimensionBoxParam(self.obj_box.box_properties)
+        self.general_box_param = LengthWidthBoxParam(self.obj_box.box_properties)
+        self.bottom_box_param = BottomBoxParam(self.obj_box.bottom_properties)
+        self.top_box_param = TopBoxParam(self.obj_box.top_properties)
 
         self.param_widget = QtGui.QWidget()
         self.param_widget.setWindowTitle("Parameters")
@@ -72,52 +151,25 @@ class MakeBox:
         self.params_vlayout.addWidget(top_group_box)
         self.params_vlayout.addWidget(bottom_group_box)
 
-        self.actual_parts = []
-        self.document = FreeCAD.ActiveDocument
         return
 
     def accept(self):
-        try:
-            self.preview()
-        except ValueError as e:
-            FreeCAD.Console.PrintError(e)
+        self.preview()
         return True
 
     def reject(self):
-        for part in self.actual_parts:
-            self.document.removeObject(part.Name)
+        self.obj_box.box_properties = self.box_properties_origin
+        self.obj_box.bottom_properties = self.bottom_properties_origin
+        self.obj_box.top_properties = self.top_properties_origin
+        self.obj_box.recompute = True
         return True
 
-    def create_new_parts(self, document, computed_parts):
-        for part in computed_parts:
-            new_shape = document.addObject("Part::Feature", part['name'])
-            new_shape.Shape = part['shape']
-            self.actual_parts.append(new_shape)
-        document.recompute()
-
-    def compute_parts(self):
-        self.general_box_param.get_properties()
-        dimension_properties = self.dim_box_param.get_properties()
-        top_properties = self.top_box_param.get_properties()
-        bottom_properties = self.bottom_box_param.get_properties()
-        parts_list = makebox.make_box(dimension_properties, top_properties, bottom_properties)
-        return parts_list
-
     def preview(self):
-        first_preview = len(self.actual_parts) == 0
-
-        for part in self.actual_parts:
-            self.document.removeObject(part.Name)
-
-        self.actual_parts = []
-
-        computed_parts = self.compute_parts()
-        self.create_new_parts(self.document, computed_parts)
-        if first_preview:
-            FreeCADGui.getDocument(self.document.Name).ActiveView.fitAll()
-
-        def init_widget():
-            return
+        self.general_box_param.get_properties()
+        self.dim_box_param.get_properties()
+        self.top_box_param.get_properties()
+        self.bottom_box_param.get_properties()
+        self.obj_box.recompute = True
 
 
 class MakeBoxCommand:
@@ -134,9 +186,14 @@ class MakeBoxCommand:
         return FreeCAD.ActiveDocument is not None
 
     def Activated(self):
-        panel = MakeBox()
-        FreeCADGui.Control.showDialog(panel)
+        groupBox = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Box")
+        GroupBox(groupBox)
+        vp = ViewProviderGroupBox(groupBox.ViewObject)
+        vp.setEdit(ViewProviderGroupBox)
         return
 
 
 Gui.addCommand('make_box_command', MakeBoxCommand())
+
+
+

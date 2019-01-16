@@ -26,8 +26,8 @@
 import Part
 import FreeCAD
 from panel.tab import TabProperties
-import flextab
-import helper
+import lasercut.flextab as flextab
+import lasercut.helper as helper
 
 
 def get_slot_positions(tab_properties):

@@ -26,16 +26,15 @@
 
 from lasercut.hingesproperties import GlobalLivingMaterialProperties
 from lasercut.hingesproperties import HingesProperties
-from toolwidget import ParamWidget, WidgetValue
+from panel.toolwidget import ParamWidget, WidgetValue
 
 
 class GlobalLivingHingeWidget(ParamWidget):
 
-    def __init__(self, cad_object):
-        self.name = cad_object.Name
-        self.label = cad_object.Label
-        material = GlobalLivingMaterialProperties(freecad_object=cad_object)
-        ParamWidget.__init__(self, material)
+    def __init__(self, global_properties):
+        self.name = global_properties.name
+        self.label = global_properties.label
+        ParamWidget.__init__(self, global_properties)
         self.widget_list.extend([WidgetValue(type=float, name="thickness", show_name="Thickness", widget=None),
                                  WidgetValue(type=str, name="new_name", show_name="Flat part name", widget=None),
                                  WidgetValue(type=list, name="hinge_type", show_name="Type", widget=None,
@@ -57,11 +56,9 @@ class GlobalLivingHingeWidget(ParamWidget):
 
 class LivingHingeWidget(ParamWidget):
 
-    def __init__(self, first_freecad_face, first_freecad_object, second_freecad_face, second_freecad_object, reversed_angle):
-        material = HingesProperties(freecad_face_1 = first_freecad_face, freecad_object_1 = first_freecad_object,
-                                    freecad_face_2 = second_freecad_face, freecad_object_2 = second_freecad_object, reversed_angle=reversed_angle)
-        self.name = material.name
-        ParamWidget.__init__(self, material)
+    def __init__(self, hingeProperties):
+        self.name = hingeProperties.name
+        ParamWidget.__init__(self, hingeProperties)
 
         self.widget_list.extend([WidgetValue(type=float, name="arc_inner_radius", show_name="Arc radius (inner)", widget=None),
                                  WidgetValue(type=float, name="arc_outer_radius", show_name="Arc radius (outer)", widget=None),

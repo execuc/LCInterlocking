@@ -26,24 +26,18 @@
 from PySide import QtGui
 
 from lasercut.tabproperties import TabProperties
-from toolwidget import ParamWidget, WidgetValue
+from panel.toolwidget import ParamWidget, WidgetValue
 import copy
-
+import FreeCAD
 
 class BaseTabWidget(ParamWidget):
-    __count = 0
 
-    @classmethod
-    def _count(cls):
-        BaseTabWidget.__count += 1
-        return BaseTabWidget.__count
-
-    def __init__(self, cad_face, cad_object, name, t_type):
-        self.name = "%s.%s" % (cad_object.Name, name)
-        self.description = "%s.%s (%s)" % (cad_object.Name, name, t_type)
-        self.real_name = name
-        tab_properties = TabProperties(freecad_object=cad_object, freecad_face=cad_face, tab_type=t_type,
-                                       name=self.name, real_name=self.real_name, group_id=self._count())
+    def __init__(self, tab_properties):
+        self.name = tab_properties.face_name
+        self.description = tab_properties.description # a supprimer ?
+        self.tab_name = tab_properties.tab_name
+        self.obj_name = tab_properties.freecad_obj_name
+        self.link_name = None
         ParamWidget.__init__(self, tab_properties)
         self.widget_list.extend([WidgetValue(type=float, name="y_length", show_name="Width", widget=None),
                                  WidgetValue(type=float, name="thickness", show_name="Thickness", widget=None),
@@ -65,14 +59,14 @@ class BaseTabWidget(ParamWidget):
 
 class TabWidget(BaseTabWidget):
 
-    def __init__(self, cad_face, cad_object, name, t_type):
-        BaseTabWidget.__init__(self, cad_face, cad_object, name, t_type)
+    def __init__(self, tab_properties):
+        BaseTabWidget.__init__(self, tab_properties)
 
 
 class TSlotWidget(BaseTabWidget):
 
-    def __init__(self, cad_face, cad_object, name, t_type):
-        BaseTabWidget.__init__(self, cad_face, cad_object, name, t_type)
+    def __init__(self, tab_properties):
+        BaseTabWidget.__init__(self, tab_properties)
 
         self.widget_list.extend([WidgetValue(type=float, name="half_tab_ratio", show_name="Half tab ratio",
                                              widget=None, interval_value=[0.1, 5.], step=0.1, decimals=2),
@@ -86,8 +80,8 @@ class TSlotWidget(BaseTabWidget):
 
 class TabContinuousWidget(BaseTabWidget):
 
-    def __init__(self, cad_face, cad_object, name, t_type):
-        BaseTabWidget.__init__(self, cad_face, cad_object, name, t_type)
+    def __init__(self, tab_properties):
+        BaseTabWidget.__init__(self, tab_properties)
 
         self.widget_list = [WidgetValue(type=float, name="y_length", show_name="Width", widget=None),
                             WidgetValue(type=float, name="thickness", show_name="Thickness", widget=None),
@@ -100,8 +94,8 @@ class TabContinuousWidget(BaseTabWidget):
 
 class TabFlexWidget(BaseTabWidget):
 
-    def __init__(self, cad_face, cad_object, name, t_type):
-        BaseTabWidget.__init__(self, cad_face, cad_object, name, t_type)
+    def __init__(self, tab_properties):
+        BaseTabWidget.__init__(self, tab_properties)
 
         self.widget_list = [WidgetValue(type=float, name="tabs_width", show_name="Width of tabs", widget=None,
                                             interval_value=[1., 300.], step=1., decimals=2),
@@ -111,13 +105,13 @@ class TabFlexWidget(BaseTabWidget):
 
 class TabLink(ParamWidget):
 
-    def __init__(self, cad_face, cad_object, name, tab_link):
-        self.tab_link = tab_link
-        self.name = "%s.%s" % (cad_object.Name, name)
-        self.real_name = name
-        tab_properties = TabProperties(freecad_object=cad_object, freecad_face=cad_face,
-                                       tab_type=str(self.tab_link.properties().tab_type),
-                                       name=self.name, real_name=self.real_name)
+    def __init__(self, tab_properties):
+        self.name = tab_properties.face_name
+        self.description = tab_properties.description
+        self.tab_name = tab_properties.tab_name
+        self.obj_name = tab_properties.freecad_obj_name
+        self.link_name =  tab_properties.link_name
+
         ParamWidget.__init__(self, tab_properties)
         self.widget_list.extend([WidgetValue(type=bool, name="y_invert", show_name="Invert Y", widget=None)])
 
@@ -127,7 +121,7 @@ class TabLink(ParamWidget):
         self.form = widget
         grid = self.get_grid()
         title = QtGui.QLabel(self.form)
-        title.setText("Linked tab to : %s" % self.tab_link.description)
+        title.setText("Linked tab to : %s" % self.link_name)
         grid.addWidget(title, 1, 0, 1, 2)
         group_box.setLayout(grid)
         group_box.setTitle(self.name)
@@ -136,89 +130,130 @@ class TabLink(ParamWidget):
 
 class TabsList(object):
 
-    def __init__(self):
-        self.tabs_list = []
+    def __init__(self, faces):
+        self.faces = faces
+        self.faces_widget_list = []
         return
 
-    def append(self, freecad_face, freecad_object, name, tab_type):
-        if self.exist(name):
-            raise ValueError(name + " already in interactor tabs list")
-        else:
-            tab = None
-            if tab_type == TabProperties.TYPE_TAB:
-                tab = TabWidget(freecad_face, freecad_object, name, tab_type)
-            elif tab_type == TabProperties.TYPE_T_SLOT:
-                tab = TSlotWidget(freecad_face, freecad_object, name, tab_type)
-            elif tab_type == TabProperties.TYPE_CONTINUOUS:
-                tab = TabContinuousWidget(freecad_face, freecad_object, name, tab_type)
-            elif tab_type == TabProperties.TYPE_FLEX:
-                tab = TabFlexWidget(freecad_face, freecad_object, name, tab_type)
+    def resumeWidget(self):
+        for face in self.faces:
+            if not face.link_name:
+                self.faces_widget_list.append(self.createWidgetFromTabProperties(face))
             else:
-                raise ValueError(name + " unkonwn type of tab")
-            self.tabs_list.append(tab)
-        return self.tabs_list[-1]
+                self.faces_widget_list.append(TabLink(face))
+        return self.faces_widget_list
 
-    def append_link(self, freecad_face, freecad_object, name, part_src_name):
-        if self.exist(name):
-            raise ValueError(name + " already in interactor tabs list")
+    def createWidgetFromTabProperties(self, tab_properties):
+        widget = None
+        tab_type = tab_properties.tab_type
+
+        if tab_type == TabProperties.TYPE_TAB:
+            widget = TabWidget(tab_properties)
+        elif tab_type == TabProperties.TYPE_T_SLOT:
+            widget = TSlotWidget(tab_properties)
+        elif tab_type == TabProperties.TYPE_CONTINUOUS:
+            widget = TabContinuousWidget(tab_properties)
+        elif tab_type == TabProperties.TYPE_FLEX:
+            widget = TabFlexWidget(tab_properties)
         else:
-            src_tab_element = self.get(part_src_name)
-            if src_tab_element is None:
-                raise ValueError("No original part found (%s)" % part_src_name)
-            self.tabs_list.append(TabLink(freecad_face, freecad_object, name, src_tab_element))
-        return self.tabs_list[-1]
+            raise ValueError("Unkonwn type of tab")
+
+        return widget
+
+    def append(self, face, tab_type):
+        name = face["name"]
+        tab_properties = TabProperties(freecad_face=face['face'],
+                                       freecad_obj_name=face['freecad_object'].Name,
+                                       face_name=name,
+                                       tab_type=tab_type)
+
+        if self.exist(tab_properties.tab_name):
+            raise ValueError(tab_properties.tab_name + " already in interactor tabs list")
+
+        widget = self.createWidgetFromTabProperties(tab_properties)
+        self.faces.append(tab_properties)
+        self.faces_widget_list.append(widget)
+        return self.faces[-1], self.faces_widget_list[-1]
+
+    def append_link(self, face, src_tab_name):
+        src_tab_element, widget = self.get(src_tab_name)
+        if src_tab_element is None:
+            raise ValueError("No original part found (%s)" % src_tab_name)
+        name = face["name"]
+        tab_properties = TabProperties(freecad_face=face['face'],
+                                       freecad_obj_name=face['freecad_object'].Name,
+                                       face_name=name,
+                                       tab_type=TabProperties.TYPE_NOT_DEFINED,
+                                       link_name=src_tab_name)
+
+        if self.exist(tab_properties.tab_name):
+            raise ValueError(tab_properties.tab_name + " already in interactor tabs list")
+
+        self.faces.append(tab_properties)
+        self.faces_widget_list.append(TabLink(tab_properties))
+        return self.faces[-1], self.faces_widget_list[-1]
 
     def remove(self, name):
-        found = None
+        found_index = None
         linked_tabs = self.get_linked_tabs(name)
         if len(linked_tabs) > 0:
             raise ValueError('Some tabs are linked to this part %s' % name)
 
-        for part in self.tabs_list:
-            if part.name == name:
-                found = part
+        for index in range(len(self.faces)):
+            if self.faces[index].tab_name == name:
+                found_index = index
                 break
-        if found is not None:
-            self.tabs_list.remove(found)
+
+        if found_index is not None:
+            self.faces.pop(found_index)
+            self.faces_widget_list.pop(found_index)
 
     def exist(self, name):
-        for part in self.tabs_list:
-            if part.name == name:
+        for part in self.faces:
+            if part.tab_name == name:
                 return True
         return False
 
     def get(self, name):
-        for tab in self.tabs_list:
-            if tab.name == name:
-                return tab
-        return None
+        FreeCAD.Console.PrintMessage("get " + name + "\n")
+        for index in range(len(self.faces)):
+            if self.faces[index].tab_name == name:
+                FreeCAD.Console.PrintMessage("found " + name + "\n")
+                return self.faces[index], self.faces_widget_list[index]
+        return None, None
 
     def get_linked_tabs(self, name):
         el_list = []
-        for tab in self.tabs_list:
-            if isinstance(tab, TabLink) and tab.tab_link.name == name:
+        for tab in self.faces:
+            if isinstance(tab, TabLink) and tab.link_name == name:
                 el_list.append(tab)
         return el_list
 
     def __iter__(self):
-        return iter(self.tabs_list)
+        return iter(self.faces)
 
     def get_tabs_properties(self):
         tabs_properties = []
-        for tab in self.tabs_list:
-            if isinstance(tab, TabLink):
-                linked_properties = copy.copy(tab.tab_link.properties())
-                linked_properties.freecad_object = tab.properties().freecad_object
-                linked_properties.freecad_face = tab.properties().freecad_face
-                linked_properties.name = tab.properties().name
-                linked_properties.real_name = tab.properties().real_name
-                linked_properties.y_invert = tab.properties().y_invert
-                linked_properties.transform_matrix = tab.properties().transform_matrix
-                linked_properties.thickness = tab.properties().thickness
-                linked_properties.y_length = tab.properties().y_length
-                tabs_properties.append(linked_properties)
+        for tab in self.faces.lst:
+            if tab.link_name:
+                tab_link, widget = self.get(tab.link_name)
+                new_tab = copy.deepcopy(tab_link)
+                new_tab.link_name = tab.link_name
+                new_tab.tab_name = tab.tab_name
+                new_tab.face_name = tab.face_name
+                new_tab.description = tab.description
+                new_tab.freecad_obj_name = tab.freecad_obj_name
+                new_tab.y_invert = tab.y_invert
+                new_tab.transform_matrix = tab.transform_matrix
+                new_tab.thickness = tab.thickness
+                new_tab.y_length = tab.y_length
+
+                tabs_properties.append(new_tab)
             else:
-                tabs_properties.append(tab.properties())
+                tabs_properties.append(copy.deepcopy(tab))
+
+        self.faces.lst = tabs_properties
+
         return tabs_properties
 
 

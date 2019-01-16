@@ -26,16 +26,15 @@
 import FreeCAD
 import Part
 import collections
-import copy
-from helper import ObjectProperties, sort_quad_vertex, biggest_area_faces, sort_area_shape_list
+from lasercut.helper import ObjectProperties, sort_quad_vertex, biggest_area_faces, sort_area_shape_list, compare_value
 
 
 class MaterialProperties(ObjectProperties):
 
     _allowed = ('type', 'thickness', 'thickness_tolerance', 'hole_width_tolerance',
-                'laser_beam_diameter', 'freecad_object',
+                'laser_beam_diameter', 'name', 'label', 'link_name',
                 # For cross Part
-                'dog_bone', 'node_type', 'node_thickness')
+                'dog_bone', 'node_type', 'node_thickness') #'freecad_object_index'
     TYPE_LASER_CUT = 1
     NODE_NO = "No node"
     NODE_SINGLE_SHORT = 'Single short'
@@ -44,14 +43,16 @@ class MaterialProperties(ObjectProperties):
 
     def __init__(self, **kwargs):
         super(MaterialProperties, self).__init__(**kwargs)
-        if not hasattr(self, 'freecad_object'):
-            raise ValueError("Must defined freecad object")
+        self.freecad_object = None
+        #if not hasattr(self, 'freecad_object_index'):
+        #    raise ValueError("Must defined freecad object")
         if not hasattr(self, 'type'):
             self.type = self.TYPE_LASER_CUT
         if not hasattr(self, 'thickness'):
             self.thickness = 5.0
             try:
-                self.thickness = retrieve_thickness_from_biggest_face(self.freecad_object)
+                #self.thickness = retrieve_thickness_from_biggest_face(self.freecad_object)
+                self.thickness = retrieve_thickness_from_biggest_face(kwargs['freecad_object'])
                 # FreeCAD.Console.PrintError("found : %f\n" % self.thickness)
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
@@ -60,7 +61,7 @@ class MaterialProperties(ObjectProperties):
         if not hasattr(self, 'laser_beam_diameter'):
             self.laser_beam_diameter = self.thickness / 15.0
         if not hasattr(self, 'new_name'):
-            self.new_name = "%s_tab" % self.freecad_object.Label
+            self.new_name = "%s_tab" % kwargs['freecad_object'].Label
         if not hasattr(self, 'hole_width_tolerance'):
             self.hole_width_tolerance = 0.0
         # For cross part
@@ -70,6 +71,14 @@ class MaterialProperties(ObjectProperties):
             self.node_type = self.NODE_NO
         if not hasattr(self, 'node_thickness'):
             self.node_thickness = 0.05 * self.thickness
+        if not hasattr(self, 'link_name'):
+            self.link_name = ""
+
+    def recomputeInit(self, freecad_obj):
+        self.freecad_object = freecad_obj
+        thickness = retrieve_thickness_from_biggest_face(freecad_obj)
+        if compare_value(thickness, self.thickness) is False:
+            FreeCAD.Console.PrintError("Recomputed thickness for %s is different (%f != %f)\n" % (self.name, thickness, self.thickness))
 
 
 # Prendre la normal la plus présente en terme de surface (biggest_area_faces)

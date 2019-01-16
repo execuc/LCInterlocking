@@ -28,9 +28,9 @@ import FreeCAD
 import FreeCADGui
 import Part
 import math
-from roundedboxproperties import RoundedBoxProperties, TopBottomRoundedProperties
-import helper
-from makehinges import do_intersection
+from lasercut.roundedboxproperties import RoundedBoxProperties, TopBottomRoundedProperties
+import lasercut.helper as helper
+from lasercut.makehinges import do_intersection
 
 
 def make_rounded_box(dimension_properties, top_properties, bottom_properties):
@@ -173,7 +173,7 @@ def retrieve_segments_arc(polygon_segment):
         outer_arc_point = outer_arc_point.add(intersection_point)
         arcs_segment_list.append(helper.Segment(outer_arc_point, inner_arc_point))
 
-    FreeCAD.Console.PrintMessage("Computed arc radius : inner = %f, outer = %f" % (inner_arc_radius, outer_arc_radius))
+    #FreeCAD.Console.PrintMessage("Computed arc radius : inner = %f, outer = %f" % (inner_arc_radius, outer_arc_radius))
     return arcs_segment_list
 
 

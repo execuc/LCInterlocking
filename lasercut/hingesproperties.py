@@ -26,25 +26,32 @@
 import FreeCAD
 from lasercut import helper
 from lasercut.material import retrieve_thickness_from_biggest_face
-from makehinges import complete_hinges_properties, create_solid_corner, estimate_min_link
+from lasercut.makehinges import complete_hinges_properties, create_solid_corner, estimate_min_link
 import copy
 
 
 class HingesProperties(helper.ObjectProperties):
 
-    _allowed = ('freecad_face_1', 'freecad_object_1', 'freecad_face_2', 'freecad_object_2', 'name',
+    _allowed = ('freecad_face_1_name', 'freecad_object_1_name', 'freecad_face_2_name', 'freecad_object_2_name', 'name',
                 'seg_face_1', 'seg_face_2', 'extrustion_vector', 'rad_angle', 'deg_angle', 'rotation_vector'
                 'arc_length', 'arc_inner_radius', 'arc_outer_radius',
                 'min_links_nb', 'nb_link', 'thickness', 'reversed_angle')
 
     def __init__(self, **kwargs):
         super(HingesProperties, self).__init__(**kwargs)
-        if not hasattr(self, 'freecad_object_1') or not hasattr(self, 'freecad_face_1'):
+        self.freecad_object_1 = None
+        self.freecad_face_1 = None
+        self.freecad_object_2 = None
+        self.freecad_face_2 = None
+        if not kwargs['freecad_object_1'] or not kwargs['freecad_face_1']:
             raise ValueError("Must defined freecad face/object")
-        if not hasattr(self, 'freecad_object_2') or not hasattr(self, 'freecad_face_2'):
+        if not kwargs['freecad_object_2'] or not kwargs['freecad_face_2']:
             raise ValueError("Must defined freecad face/object")
+        self.freecad_object_1_name = kwargs['freecad_object_1'].Name
+        self.freecad_object_2_name = kwargs['freecad_object_2'].Name
+
         if not hasattr(self, 'name'):
-            self.name = self.freecad_object_1.Label + " -> " + self.freecad_object_2.Label
+            self.name = kwargs['freecad_object_1'].Label + " -> " + kwargs['freecad_object_2'].Label
         self.arc_length = None
         self.extrustion_vector = None
         self.solid = None
@@ -60,18 +67,26 @@ class HingesProperties(helper.ObjectProperties):
         self.arc_outer_radius = None
         self.nb_link = 5
 
-        complete_hinges_properties(self)
-        create_solid_corner(self)
+        complete_hinges_properties(self, kwargs['freecad_face_1'], kwargs['freecad_face_2'], False)
+        #create_solid_corner(self)
         self.compute_min_link(0.20)
 
     def compute_min_link(self, clearance_width):
         self.min_links_nb = estimate_min_link(self.rad_angle, self.thickness, clearance_width)
         self.nb_link = self.min_links_nb + 1
 
+    def recomputeInit(self, freecad_object_1, freecad_face_1, freecad_object_2, freecad_face_2):
+        self.freecad_object_1 = freecad_object_1
+        self.freecad_face_1 = freecad_face_1
+        self.freecad_object_2 = freecad_object_2
+        self.freecad_face_2 = freecad_face_2
+        complete_hinges_properties(self, freecad_face_1, freecad_face_2, True)
+        create_solid_corner(self)
 
 class GlobalLivingMaterialProperties(helper.ObjectProperties):
 
-    _allowed = ('new_name', 'thickness', 'laser_beam_diameter', 'freecad_object',
+    _allowed = ('new_name', 'thickness', 'laser_beam_diameter', 'freecad_object_name',
+                'freecad_object_label'
                 'generate_solid', 'dog_bone', 'link_clearance', 'solid_name',
                 'hinge_type', "alternate_nb_hinge", "occupancy_ratio")
 
@@ -79,23 +94,31 @@ class GlobalLivingMaterialProperties(helper.ObjectProperties):
 
     def __init__(self, **kwargs):
         super(GlobalLivingMaterialProperties, self).__init__(**kwargs)
-        if not hasattr(self, 'freecad_object'):
-            raise ValueError("Must defined freecad object")
+        #if not hasattr(self, 'freecad_object'):
+        #    raise ValueError("Must defined freecad object")
         if not hasattr(self, 'thickness'):
             self.thickness = 5.0
             try:
-                self.thickness = retrieve_thickness_from_biggest_face(self.freecad_object)
+                self.thickness = retrieve_thickness_from_biggest_face(kwargs['freecad_object'])
                 # FreeCAD.Console.PrintError("found : %f\n" % self.thickness)
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
+
+        if not hasattr(self, 'freecad_object_name'):
+            self.freecad_object_name = kwargs['freecad_object'].Name
+        if not hasattr(self, 'name'):
+            self.name = kwargs['freecad_object'].Name
+        if not hasattr(self, 'label'):
+            self.label = kwargs['freecad_object'].Label
+
         if not hasattr(self, 'laser_beam_diameter'):
             self.laser_beam_diameter = self.thickness / 15.0
         if not hasattr(self, 'link_clearance'):
             self.link_clearance = self.laser_beam_diameter * 3.0
         if not hasattr(self, 'new_name'):
-            self.new_name = "%s_flat" % self.freecad_object.Label
-        if not hasattr(self, 'solid_name'):
-            self.solid_name = "%s_solid" % self.freecad_object.Label
+            self.new_name = "%s_flat" % kwargs['freecad_object'].Label
+        if not hasattr(self, 'solid_name'): #
+            self.solid_name = "%s_solid" % kwargs['freecad_object'].Label
         if not hasattr(self, 'dog_bone'):
             self.dog_bone = False
         if not hasattr(self, 'generate_solid'):

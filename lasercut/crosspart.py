@@ -26,8 +26,8 @@
 import Part
 import FreeCAD
 import itertools
-import helper
-from material import MaterialProperties
+import lasercut.helper as helper
+from lasercut.material import MaterialProperties
 
 
 def is_inside(face, shape_to_test):

@@ -25,7 +25,7 @@
 
 from PySide import QtCore, QtGui
 from lasercut import helper
-
+import FreeCAD
 
 class WidgetValue(helper.ObjectProperties):
 

@@ -23,63 +23,170 @@
 # *                                                                         *
 # ***************************************************************************
 
-from FreeCAD import Gui
-import FreeCADGui
 import FreeCAD
-from PySide import QtCore, QtGui
+import FreeCADGui
+from FreeCAD import Gui, Matrix
 import os
-
-from treepanel import TreePanel
 from lasercut.crosspart import make_cross_parts
+from panel.treepanel import TreePanel
+from panel.propertieslist import PropertiesList
+import json
+import copy
+from PySide import QtCore, QtGui
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, '../icons')
 
-class CrossPiece(TreePanel):
 
-    def __init__(self):
-        super(CrossPiece, self).__init__("Crosspiece")
+class CrossPieceGroup:
+    def __init__(self, obj):
+        obj.addProperty('App::PropertyPythonObject', 'parts').parts = PropertiesList()
+        obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
+        obj.addProperty('App::PropertyPythonObject', 'preview').preview = False
+        obj.addProperty('App::PropertyLinkList', 'generatedParts').generatedParts = []
+        obj.addProperty('App::PropertyLinkList', 'fromParts').fromParts = []
+        obj.addProperty('App::PropertyPythonObject', 'edit').edit = False
+        obj.addProperty('App::PropertyPythonObject', 'namesMapping').namesMapping = {}
+        obj.Proxy = self
+
+    def onChanged(self, fp, prop):
+        if prop == "recompute":
+            self.execute(fp)
+        elif prop == "edit":
+            self.editMode(fp)
+
+    def editMode(self, fp):
+        if fp.edit:
+            if not hasattr(fp, "fromParts"):
+                return
+            for obj in fp.fromParts:
+                obj.ViewObject.show()
+            for obj in fp.generatedParts:
+                obj.ViewObject.hide()
+        else:
+            if not hasattr(fp, "fromParts"):
+                return
+            for obj in fp.fromParts:
+                obj.ViewObject.hide()
+            for obj in fp.generatedParts:
+                obj.ViewObject.show()
+
+    def execute(self, fp):
+        if fp.recompute:
+            fp.recompute = False
+
+            document = fp.Document
+            if len(fp.fromParts) > 0:
+                groupObj = fp.fromParts[0]
+            else:
+                groupObj = document.addObject("App::DocumentObjectGroup", str(fp.Name) + "_origin_parts")
+
+            subObjectList = groupObj.Group
+            for subObj in subObjectList:
+                groupObj.removeObject(subObj)
+
+            fp.fromParts = []
+            parts = []
+            freedac_origin_obj = []
+            freedac_origin_obj.append(groupObj)
+            for part in fp.parts.lst:
+                cp_part = copy.deepcopy(part)
+                freecad_obj = document.getObject(cp_part.name)
+                freedac_origin_obj.append(freecad_obj)
+                cp_part.recomputeInit(freecad_obj)
+                groupObj.addObject(freecad_obj)
+                parts.append(cp_part)
+
+            fp.fromParts = freedac_origin_obj
+            computed_parts = make_cross_parts(parts)
+
+            previous_nameMapping = copy.copy(fp.namesMapping)
+            fp.namesMapping.clear()
+
+            freecad_obj_generated = []
+            freecad_objname_tokeep = []
+            for part in computed_parts:
+                if part.get_new_name() in previous_nameMapping:
+                    freecad_obj = document.getObject(previous_nameMapping[part.get_new_name()])
+                else:
+                    freecad_obj = document.addObject("Part::Feature", part.get_new_name())
+                fp.namesMapping[part.get_new_name()] = freecad_obj.Name
+                freecad_obj.Shape = part.get_shape()
+                freecad_objname_tokeep.append(freecad_obj.Name)
+                freecad_obj_generated.append(freecad_obj)
+
+            for part in fp.generatedParts:
+                if part.Name not in freecad_objname_tokeep:
+                    document.removeObject(part.Name)
+
+            fp.generatedParts = freecad_obj_generated
+            fp.edit = False
+
+            FreeCADGui.getDocument(document.Name).ActiveView.fitAll()
+            document.recompute()
+
+
+class CrossPieceViewProvider:
+    def __init__(self, vobj):
+        vobj.Proxy = self
+
+    def setEdit(self, vobj=None, mode=0):
+        if mode == 0:
+            FreeCADGui.Control.showDialog(CrossPiece(self.Object))
+            return True
+
+    def setupContextMenu(self, obj, menu):
+        action = menu.addAction("Edit")
+        action.triggered.connect(self.setEdit)
+
+    def onChanged(self, vp, prop):
+        pass
+
+    def __getstate__(self):
+        ''' When saving the document this object gets stored using Python's cPickle module.
+        Since we have some un-pickable here -- the Coin stuff -- we must define this method
+        to return a tuple of all pickable objects or None.
+        '''
+        return None
+
+    def __setstate__(self, state):
+        ''' When restoring the pickled object from document we have the chance to set some
+        internals here. Since no data were pickled nothing needs to be done here.
+        '''
+        return None
+
+    def attach(self, vobj):
+        self.ViewObject = vobj
+        self.Object = vobj.Object
+
+    def claimChildren(self):
+        if len(self.Object.fromParts) > 0:
+            return [self.Object.fromParts[0]] + self.Object.generatedParts
+        else:
+            return []
+
+
+class CrossPiece(TreePanel):
+    def __init__(self, obj_join):
+        super(CrossPiece, self).__init__("Crosspiece", obj_join)
+        self.obj_join = obj_join
+        self.parts_origin = copy.deepcopy(obj_join.parts)
+        self.obj_join.edit = True
 
     def accept(self):
-        try:
-            computed_parts = self.compute_parts()
-            self.create_new_parts(self.active_document, computed_parts)
-            for part in self.partsList.get_parts_properties():
-                part.freecad_object.ViewObject.hide()
-        except ValueError as e:
-            FreeCAD.Console.PrintError(e)
+        self.compute()
+
         return True
 
     def reject(self):
+        self.obj_join.parts = self.parts_origin
+        self.obj_join.edit = False
         return True
 
-    def compute_parts(self):
+    def compute(self):
         self.save_items_properties()
-        parts = self.partsList.get_parts_properties()
-        if len(parts) == 0:
-            raise ValueError("No pars or tabs defined")
-        return make_cross_parts(parts)
-
-    def preview(self):
-        #FreeCAD.Console.PrintMessage("Preview Button\n")
-        computed_parts = self.compute_parts()
-        preview_doc_exist = True
-        try:
-            FreeCAD.getDocument("preview_parts")
-        except:
-            preview_doc_exist = False
-
-        if not preview_doc_exist:
-            self.preview_doc = FreeCAD.newDocument("preview_parts")
-        else:
-            objs = self.preview_doc.Objects
-            for obj in objs:
-                self.preview_doc.removeObject(obj.Name)
-
-        self.create_new_parts(self.preview_doc, computed_parts)
-        if not preview_doc_exist:
-            FreeCADGui.getDocument(self.preview_doc.Name).ActiveView.fitAll()
-        return
+        self.save_link_properties()
+        self.obj_join.recompute = True
 
     def init_tree_widget(self):
         # Add part buttons
@@ -102,8 +209,6 @@ class CrossPiece(TreePanel):
         self.edit_items_layout = QtGui.QVBoxLayout(self.tree_widget)
         self.tree_vbox.addLayout(self.edit_items_layout)
 
-
-
 class CrossPieceCommand:
 
     def __init__(self):
@@ -115,15 +220,13 @@ class CrossPieceCommand:
                 'ToolTip': "Crosspiece"}
 
     def IsActive(self):
-        #return len(FreeCADGui.Selection.getSelection()) > 0
         return True
 
     def Activated(self):
-        panel = CrossPiece()
-        FreeCADGui.Control.showDialog(panel)
+        groupCross = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "CrossPiece")
+        CrossPieceGroup(groupCross)
+        vp = CrossPieceViewProvider(groupCross.ViewObject)
+        vp.setEdit(CrossPieceViewProvider)
         return
-
-
-
 
 Gui.addCommand('crosspiece', CrossPieceCommand())

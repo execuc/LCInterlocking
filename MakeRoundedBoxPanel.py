@@ -30,17 +30,95 @@ import Part
 import os
 import math
 import Draft
-from panel.roundedbox import DimensionRoundedBoxParam, BottomRoundedBoxParam, TopBoxRoundedParam
+import copy
+from panel.roundedbox import RoundedBoxProperties, TopBottomRoundedProperties, DimensionRoundedBoxParam, BottomRoundedBoxParam, TopBoxRoundedParam
 from lasercut import makeroundedbox
+
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, 'icons')
 from PySide import QtCore, QtGui
 
 
+class GroupRoundedBox:
+    def __init__(self, obj):
+        obj.addProperty("App::PropertyPythonObject", "box_properties").box_properties = RoundedBoxProperties()
+        obj.addProperty("App::PropertyPythonObject", "top_properties").top_properties = TopBottomRoundedProperties()
+        obj.addProperty("App::PropertyPythonObject", "bottom_properties").bottom_properties = TopBottomRoundedProperties()
+        obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
+        obj.addProperty('App::PropertyLinkList', 'parts').parts= []
+        obj.Proxy = self
+
+    def onChanged(self, fp, prop):
+        if prop == "recompute":
+            self.execute(fp)
+
+    def execute(self, fp):
+        if fp.recompute:
+            fp.recompute = False
+
+            document = fp.Document
+            computed_parts = makeroundedbox.make_rounded_box(fp.box_properties, fp.top_properties, fp.bottom_properties)
+
+            object_list = fp.parts
+            if len(computed_parts) != len(object_list):
+                for part in object_list:
+                    document.removeObject(part.Name)
+
+                object_list = []
+                for part in computed_parts:
+                    new_shape = document.addObject("Part::Feature", part['name'])
+                    object_list.append(new_shape)
+
+            for index in range(len(computed_parts)):
+                object_list[index].Shape = computed_parts[index]['shape']
+
+            fp.parts = object_list
+            FreeCADGui.getDocument(document.Name).ActiveView.fitAll()
+            document.recompute()
+
+
+class ViewProviderGroupRoundedBox:
+    def __init__(self, vobj):
+        vobj.Proxy = self
+
+    def setEdit(self, vobj=None, mode=0):
+        if mode == 0:
+            FreeCADGui.Control.showDialog(MakeRoundedBox(self.Object))
+            return True
+
+    def setupContextMenu(self, obj, menu):
+        action = menu.addAction("Edit")
+        action.triggered.connect(self.setEdit)
+
+    def onChanged(self, vp, prop):
+        pass
+
+    def __getstate__(self):
+        ''' When saving the document this object gets stored using Python's cPickle module.
+        Since we have some un-pickable here -- the Coin stuff -- we must define this method
+        to return a tuple of all pickable objects or None.
+        '''
+        return None
+
+    def __setstate__(self, state):
+        ''' When restoring the pickled object from document we have the chance to set some
+        internals here. Since no data were pickled nothing needs to be done here.
+        '''
+        return None
+
+    def attach(self, vobj):
+        self.ViewObject = vobj
+        self.Object = vobj.Object
+
+    def claimChildren(self):
+        return self.Object.parts
+
+
+
 class MakeRoundedBox:
 
-    def __init__(self):
+    def __init__(self, obj_box):
         self.form = []
         self.main_widget = QtGui.QWidget()
         self.main_widget.setWindowTitle("Make rounded box")
@@ -51,9 +129,14 @@ class MakeRoundedBox:
         self.parts_vbox.addWidget(self.preview_button, 0, 0, 1, 2)
         self.preview_button.clicked.connect(self.preview)
 
-        self.box_properties = DimensionRoundedBoxParam()
-        self.bottom_box_param = BottomRoundedBoxParam()
-        self.top_box_param = TopBoxRoundedParam()
+        self.obj_box = obj_box
+        self.box_properties_origin = copy.deepcopy(self.obj_box.box_properties)
+        self.bottom_properties_origin = copy.deepcopy(self.obj_box.bottom_properties)
+        self.top_properties_origin = copy.deepcopy(self.obj_box.top_properties)
+
+        self.box_properties = DimensionRoundedBoxParam(self.obj_box.box_properties)
+        self.bottom_box_param = BottomRoundedBoxParam(self.obj_box.bottom_properties)
+        self.top_box_param = TopBoxRoundedParam(self.obj_box.top_properties)
 
         self.param_widget = QtGui.QWidget()
         self.param_widget.setWindowTitle("Parameters")
@@ -69,62 +152,30 @@ class MakeRoundedBox:
         self.params_vlayout.addWidget(bottom_group_box)
 
         radius_widget = self.box_properties.get_widget("inradius")
-        radius_widget.valueChanged.connect(self.update_parameters)
+        radius_widget.valueChanged.connect(self.preview)
         nb_face_widget = self.box_properties.get_widget("nb_face")
-        nb_face_widget.valueChanged.connect(self.update_parameters)
+        nb_face_widget.valueChanged.connect(self.preview)
 
         self.actual_parts = []
         self.document = FreeCAD.ActiveDocument
         return
 
     def accept(self):
-        try:
-            self.preview()
-        except ValueError as e:
-            FreeCAD.Console.PrintError(e)
+        self.preview()
         return True
 
     def reject(self):
-        for part in self.actual_parts:
-            self.document.removeObject(part.Name)
+        self.obj_box.box_properties = self.box_properties_origin
+        self.obj_box.bottom_properties = self.bottom_properties_origin
+        self.obj_box.top_properties = self.top_properties_origin
+        self.obj_box.recompute = True
         return True
 
-    def update_parameters(self, value):
-        self.box_properties.get_properties().compute_information()
-        self.box_properties.update_information()
-        return
-
-    def create_new_parts(self, document, computed_parts):
-        for part in computed_parts:
-            new_shape = document.addObject("Part::Feature", part['name'])
-            new_shape.Shape = part['shape']
-            self.actual_parts.append(new_shape)
-        document.recompute()
-
-    def compute_parts(self):
-        dimension_properties = self.box_properties.get_properties()
-        top_properties = self.top_box_param.get_properties()
-        bottom_properties = self.bottom_box_param.get_properties()
-        parts_list = makeroundedbox.make_rounded_box(dimension_properties, top_properties, bottom_properties)
-        return parts_list
-
-    # Faire plutot un rendu dans le fenetre actuel, ne pas en creer une autre
-    #self.active_document != FreeCAD.ActiveDocument:
     def preview(self):
-        first_preview = len(self.actual_parts) == 0
-
-        for part in self.actual_parts:
-            self.document.removeObject(part.Name)
-
-        self.actual_parts = []
-
-        computed_parts = self.compute_parts()
-        self.create_new_parts(self.document, computed_parts)
-        if first_preview:
-            FreeCADGui.getDocument(self.document.Name).ActiveView.fitAll()
-
-        def init_widget():
-            return
+        self.box_properties.get_properties()
+        self.bottom_box_param.get_properties()
+        self.top_box_param.get_properties()
+        self.obj_box.recompute = True
 
 
 class MakeRoundedBoxCommand:
@@ -141,8 +192,10 @@ class MakeRoundedBoxCommand:
         return FreeCAD.ActiveDocument is not None
 
     def Activated(self):
-        panel = MakeRoundedBox()
-        FreeCADGui.Control.showDialog(panel)
+        groupRoundedBox = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "RoundedBox")
+        GroupRoundedBox(groupRoundedBox)
+        vp = ViewProviderGroupRoundedBox(groupRoundedBox.ViewObject)
+        vp.setEdit(ViewProviderGroupRoundedBox)
         return
 
 
