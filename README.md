@@ -2,9 +2,11 @@ LCInterlocking
 ==========
 
 **2019/01: all tools can now be reedited.**
+
 **2019/01: add support to Python 3 of Freecad 0.18.** 
 
 Experimental module for FreeCAD 0.16 and 0.17.
+
 It is not reliable, you have to check parts before doing the laser cut, don't trust it !
 
 Interlocking demonstration : https://youtu.be/YGFIdLpdWXE
