@@ -4,7 +4,6 @@ Box generator
 This tool allows to generate parts for making a box without no connection. 
 It is just a convenient tool because same parts can be created from FreeCAD part/partDesign. User does not have to start with this to use the interlocking tool
 
-<br>
 ![Illustration](imgs/box_generator/overview.png)
 <br>
 Parameters
