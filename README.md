@@ -1,16 +1,13 @@
 LCInterlocking
 ==========
 
+![Illustration](docs/imgs/illustration.png)<br>
+
 Goal
 --------------------
 This experimental FreeCAD module is used to create interlocking cut parts from 3D to 2D SVG. It was created for laser cutting but can work with CNC router.<br>
 
 **It is not reliable, you have to check parts before doing the laser cut, don't trust it !**
-
-Gallery
---------------------
-![Illustration](docs/imgs/illustration.png)<br>
-![Illustration](docs/imgs/illustration2.png)
 
 Panel
 --------------------
@@ -19,12 +16,12 @@ This panel appears when "Laser cut Interlocking" module is selected :
 
 Tools
 --------------------
-![Illustration](docs/imgs/box_generator.png) : [Generate box without connection.](docs/box_generator.md)
-![Illustration](docs/imgs/interlocking.png) : [Create tabs/slots connection.](docs/interlocking.md) (Interlocking tool)
-![Illustration](docs/imgs/crosspiece.png) : [Create node for cross connection.](docs/crosspiece.md) (Crosspiece tool)
-![Illustration](docs/imgs/roundedboxgenerator.png) : [Generate rounded box without connection.](docs/rounded_box_generator.md)
-![Illustration](docs/imgs/living_hinges.png) : [Create bend surface with living hinges.](docs/living_hinges.md)
-![Illustration](docs/imgs/export.png) : [Project parts to 2D plan in order to export in SVG format.](docs/export.md) (Export tool)
+ * ![Illustration](docs/imgs/box_generator.png) : [Generate box without connection.](docs/box_generator.md)
+ * ![Illustration](docs/imgs/interlocking.png) : [Create tabs/slots connection.](docs/interlocking.md) (Interlocking tool)
+ * ![Illustration](docs/imgs/crosspiece.png) : [Create node for cross connection.](docs/crosspiece.md) (Crosspiece tool)
+ * ![Illustration](docs/imgs/roundedboxgenerator.png) : [Generate rounded box without connection.](docs/rounded_box_generator.md)
+ * ![Illustration](docs/imgs/living_hinges.png) : [Create bend surface with living hinges.](docs/living_hinges.md)
+ * ![Illustration](docs/imgs/export.png) : [Project parts to 2D plan in order to export in SVG format.](docs/export.md) (Export tool)
 
 Install Notes
 --------------------
@@ -47,12 +44,6 @@ Some videos on older module version
  * Rounded box tool:  https://www.youtube.com/watch?v=lEOgZ6k9Vxw
  * Crosspiece: https://www.youtube.com/watch?v=tIchogx5BLE
  * Rounded corner: https://www.youtube.com/watch?v=KSnMxqjA_-Q
-
-TODO
-----
- * Add new interlocking.
- * Optimize.
- * ...
  
  Change notes
 --------------------
@@ -61,3 +52,8 @@ TODO
  * Add a preview button to interlocking and crosspiece tool.
  * All tools can now be reedited.
  * Add support to Python 3 of Freecad 0.18.
+ 
+ Gallery
+--------------------
+![Illustration](docs/imgs/illustration2.png)<br>
+![Illustration](docs/imgs/illustration3.png)<br>
