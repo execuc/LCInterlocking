@@ -5,8 +5,10 @@ This is the main tool of the LCInterlocking module. It allows to define connecti
 
 Parts can come from the Freecad Part/Part Desgin workshops or from the box generator tool of this module for example. To create a connection, the faces must stick.
 
-There are three type of connections : tab, continuous tab and screw.
-![Illustration](imgs/interlocking/tab.png) ![Illustration](imgs/interlocking/continuous.png) ![Illustration](imgs/interlocking/screw.png)
+There are three type of connections : tab, continuous tab and screw. <br>
+![Illustration](imgs/interlocking/tab.png) <br>
+![Illustration](imgs/interlocking/continuous.png) <br>
+![Illustration](imgs/interlocking/screw.png)<br>
 
 Procedure
 -------------
@@ -24,20 +26,17 @@ For this example, we start from parts generated from Box generator tool to make 
   * Hide the longest side panel (select from the tool list view and use space key)
   * Select the lateral face of the bottom part, select screw in the list instead of tab.
   * Click on "Add same faces" and adjust parameters as number of tabs, screw dimensions...
-  
-    ![Illustration](imgs/interlocking/add_screw.png)
+  ![Illustration](imgs/interlocking/add_screw.png)
 <br>
    * Select the lateral face of the short side and choose "Tab" in the list.
    * Click on "Add same faces" or "Add faces" and adjust parameters
-    
-    ![Illustration](imgs/interlocking/add_conti.png)
+   ![Illustration](imgs/interlocking/add_conti.png)
 <br>
    * With the same method, create a "tab" connection between the bottom and the short side.
-
-    ![Illustration](imgs/interlocking/add_tab.png)
+   ![Illustration](imgs/interlocking/add_tab.png)
  <br> 
    * Click on OK to create a "MultiJoin" group. Origin parts are represented inside a "MultiJoin_origin_parts" group. Interlocking parts are below this group.
-    ![Illustration](imgs/interlocking/interlocking_final.png)
+   ![Illustration](imgs/interlocking/interlocking_final.png)
   
 <br>
 Now, parts can be exported via the "Export tool" in order to obtain a 2D file (SVG).
