@@ -22,7 +22,6 @@ For this example, we start from parts generated from Box generator tool to make 
     * Thickness and tolerance of the material
     * Slot width tolerance: add tolerance on slot
     * Laser beam diameter: diameter of the material destroyed by the laser.
-<br>
   * Hide the longest side panel (select from the tool list view and use space key)
   * Select the lateral face of the bottom part, select screw in the list instead of tab.
   * Click on "Add same faces" and adjust parameters as number of tabs, screw dimensions...<br>
@@ -34,13 +33,11 @@ For this example, we start from parts generated from Box generator tool to make 
   
 ![Illustration](imgs/interlocking/add_conti.png)
 
-<br>
   * With the same method, create a "tab" connection between the bottom and the short side.<br>
   
   ![Illustration](imgs/interlocking/add_tab.png)
-  
- <br> 
-   * Click on OK to create a "MultiJoin" group. Origin parts are represented inside a "MultiJoin_origin_parts" group. Interlocking parts are below this group.<br>
+ 
+  * Click on OK to create a "MultiJoin" group. Origin parts are represented inside a "MultiJoin_origin_parts" group. Interlocking parts are below this group.<br>
    
    ![Illustration](imgs/interlocking/interlocking_final.png)
   
