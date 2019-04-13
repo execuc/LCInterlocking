@@ -150,7 +150,7 @@ class MakeBox:
         self.params_vlayout.addWidget(length_group_box)
         self.params_vlayout.addWidget(top_group_box)
         self.params_vlayout.addWidget(bottom_group_box)
-
+        self.preview()
         return
 
     def accept(self):

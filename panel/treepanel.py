@@ -56,7 +56,7 @@ class TreePanel(object):
         self.show_button = None
         self.reset_transparency_button = None
         self.set_transparency_button = None
-        self.active_document = FreeCAD.ActiveDocument
+        self.active_document = self.obj_join.Document#FreeCAD.ActiveDocument
         self.tree_widget = QtGui.QWidget()
         self.tree_widget.setObjectName("TreePanel")
         self.tree_widget.setWindowTitle(title)
@@ -77,14 +77,21 @@ class TreePanel(object):
         self.show_other_state_checkbox = None
         self.other_object_list = []
         self.save_initial_objects()
+        #self.init_params()
 
-        items_list = self.partsList.resumeWidget()
-        for item in items_list:
+        #items_list = self.partsList.resumeWidget()
+        #for item in items_list:
+        #    self.model.append_part(item.name, item.label, bool(item.link_name))
+
+        #items_list = self.tabsList.resumeWidget()
+        #for item in items_list:
+        #    self.model.append_tab(item.obj_name, item.tab_name, item.name, bool(item.link_name))
+
+        for item in self.parts:
             self.model.append_part(item.name, item.label, bool(item.link_name))
 
-        items_list = self.tabsList.resumeWidget()
-        for item in items_list:
-            self.model.append_tab(item.obj_name, item.tab_name, item.name, bool(item.link_name))
+        for item in self.faces:
+            self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name, bool(item.link_name))
 
     def getStandardButtons(self):
         return int(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
@@ -96,6 +103,17 @@ class TreePanel(object):
         raise ValueError("Must overloaded")
 
     def init_tree_widget(self):
+        v_box = QtGui.QVBoxLayout(self.tree_widget)
+        preview_button = QtGui.QPushButton('Preview', self.tree_widget)
+        #self.tree_vbox.addWidget(preview_button)
+        preview_button.clicked.connect(self.preview)
+        line = QtGui.QFrame(self.tree_widget)
+        line.setFrameShape(QtGui.QFrame.HLine);
+        line.setFrameShadow(QtGui.QFrame.Sunken);
+        v_box.addWidget(preview_button)
+        v_box.addWidget(line)
+        self.tree_vbox.addLayout(v_box)
+
         # Add part buttons
         h_box = QtGui.QHBoxLayout(self.tree_widget)
         add_parts_button = QtGui.QPushButton('Add parts', self.tree_widget)
@@ -109,7 +127,7 @@ class TreePanel(object):
         h_box = QtGui.QHBoxLayout(self.tree_widget)
         self.tab_type_box = QtGui.QComboBox(self.tree_widget)
         self.tab_type_box.addItems([TabProperties.TYPE_TAB, TabProperties.TYPE_T_SLOT,
-                                    TabProperties.TYPE_CONTINUOUS, TabProperties.TYPE_FLEX])
+                                    TabProperties.TYPE_CONTINUOUS])#, TabProperties.TYPE_FLEX])
         h_box.addWidget(self.tab_type_box)
         add_faces_button = QtGui.QPushButton('Add faces', self.tree_widget)
         add_faces_button.clicked.connect(self.add_tabs)
@@ -125,6 +143,10 @@ class TreePanel(object):
         remove_item_button = QtGui.QPushButton('Remove item', self.tree_widget)
         remove_item_button.clicked.connect(self.remove_items)
         self.tree_vbox.addWidget(remove_item_button)
+        line = QtGui.QFrame(self.tree_widget)
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken)
+        self.tree_vbox.addWidget(line)
         # test layout
         self.edit_items_layout = QtGui.QVBoxLayout(self.tree_widget)
         self.tree_vbox.addLayout(self.edit_items_layout)
@@ -144,7 +166,7 @@ class TreePanel(object):
             return
         for part in parts:
             try:
-                item, widget = self.partsList.append(part)
+                item = self.partsList.append(part)
                 last_index = self.model.append_part(item.name, item.label)
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
@@ -158,10 +180,10 @@ class TreePanel(object):
         if len(freecad_parts) == 0 or not self.check_parts(freecad_parts):
             return
         try:
-            item, widget = self.partsList.append(freecad_parts[0])
+            item = self.partsList.append(freecad_parts[0])
             index = self.model.append_part(item.name, item.label)
             for part in freecad_parts[1:]:
-                sub_item, sub_widget = self.partsList.append_link(part, freecad_parts[0])
+                sub_item = self.partsList.append_link(part, freecad_parts[0])
                 self.model.append_part(sub_item.name, sub_item.label, True)
         except ValueError as e:
             FreeCAD.Console.PrintError(e)
@@ -223,7 +245,7 @@ class TreePanel(object):
             return
         for face in faces:
             try:
-                item, widget = self.tabsList.append(face, self.tab_type_box.currentText())
+                item = self.tabsList.append(face, self.tab_type_box.currentText())
                 last_index = self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name)
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
@@ -239,10 +261,10 @@ class TreePanel(object):
             return
         try:
             face = faces[0]
-            item, widget = self.tabsList.append(face, self.tab_type_box.currentText())
+            item = self.tabsList.append(face, self.tab_type_box.currentText())
             index = self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name)
             for face in faces[1:]:
-                sub_item, sub_widget = self.tabsList.append_link(face, item.tab_name)
+                sub_item = self.tabsList.append_link(face, item.tab_name)
                 self.model.append_tab(sub_item.freecad_obj_name, sub_item.tab_name, sub_item.face_name, True)
 
         except ValueError as e:
@@ -293,6 +315,11 @@ class TreePanel(object):
             self.edited_items.append(widget)
             groupx_box, grid = widget.get_group_box(self.tree_widget)
             self.edit_items_layout.addWidget(groupx_box)
+
+        for index in tab_indexes:
+            parent_index = index.parent()
+            if parent_index.isValid():
+                self.tree_view_widget.setExpanded(parent_index, True)
 
     def remove_items_widgets(self):
         for cnt in reversed(range(self.edit_items_layout.count())):

@@ -53,10 +53,10 @@ def make_box_outside_measure(dimension_properties, top_properties, bottom_proper
         length = dimension_properties.length
         length_spacing = dimension_properties.width - 2. * thickness
         width = dimension_properties.width - 2. * thickness
-        width_spacing = dimension_properties.length - 2. * thickness
+        width_spacing = dimension_properties.length - 2. * thickness - 2. * dimension_properties.width_shift
     elif dimension_properties.length_width_priority == BoxProperties.WIDTH_PRIORTY:
         length = dimension_properties.length - 2. * thickness
-        length_spacing = dimension_properties.width - 2. * thickness
+        length_spacing = dimension_properties.width - 2. * thickness - 2. * dimension_properties.length_shift
         width = dimension_properties.width
         width_spacing = dimension_properties.length - 2. * thickness
     elif dimension_properties.length_width_priority == BoxProperties.CROSS_PRIORTY:
@@ -147,17 +147,21 @@ def make_box_inside_measure(dimension_properties, top_properties, bottom_propert
     thickness = dimension_properties.thickness
     height = dimension_properties.height
     shift_height = 0.
+    add_outside_cover_length = 0.
+    add_outside_cover_width = 0.
 
     if dimension_properties.length_width_priority == BoxProperties.LENGTH_PRIORTY:
-        length = dimension_properties.length + 2. * thickness
+        length = dimension_properties.length + 2. * thickness + 2. * dimension_properties.width_shift
         length_spacing = dimension_properties.width
         width = dimension_properties.width
         width_spacing = dimension_properties.length
+        add_outside_cover_length =  2. * dimension_properties.width_shift
     elif dimension_properties.length_width_priority == BoxProperties.WIDTH_PRIORTY:
         length = dimension_properties.length
         length_spacing = dimension_properties.width
-        width = dimension_properties.width + 2. * thickness
+        width = dimension_properties.width + 2. * thickness + 2. * dimension_properties.length_shift
         width_spacing = dimension_properties.length
+        add_outside_cover_width = 2. * dimension_properties.length_shift
     elif dimension_properties.length_width_priority == BoxProperties.CROSS_PRIORTY:
         length = dimension_properties.length + 2. * thickness + dimension_properties.length_outside
         length_spacing = dimension_properties.width
@@ -191,8 +195,8 @@ def make_box_inside_measure(dimension_properties, top_properties, bottom_propert
         bottom_panel = make_z_panel(dimension_properties.length, dimension_properties.width, thickness,
                                        down_z_ref + bottom_properties.height_shift)
     else:
-        bottom_panel = make_z_panel(dimension_properties.length + 2. * thickness + bottom_properties.length_outside,
-                                       dimension_properties.width + 2. * thickness + bottom_properties.width_outside,
+        bottom_panel = make_z_panel(dimension_properties.length + 2. * thickness + bottom_properties.length_outside + add_outside_cover_length,
+                                       dimension_properties.width + 2. * thickness + bottom_properties.width_outside + add_outside_cover_width,
                                        thickness, down_z_ref - thickness)
 
     #top_panel = make_top_panel(dimension_properties, top_properties, up_z_ref, False)
@@ -202,8 +206,8 @@ def make_box_inside_measure(dimension_properties, top_properties, bottom_propert
         top_panel = make_z_panel(dimension_properties.length, dimension_properties.width, thickness,
                                     up_z_ref - thickness - top_properties.height_shift)
     else:
-        top_panel = make_z_panel(dimension_properties.length + 2. * thickness + top_properties.length_outside,
-                                    dimension_properties.width + 2. * thickness + top_properties.width_outside,
+        top_panel = make_z_panel(dimension_properties.length + 2. * thickness + top_properties.length_outside + add_outside_cover_length,
+                                    dimension_properties.width + 2. * thickness + top_properties.width_outside + add_outside_cover_width,
                                     thickness, up_z_ref)
 
     if face_panel is not None :

@@ -95,20 +95,20 @@ class PartsList(object):
     def __init__(self, object_type, parts):
         self.part_list = parts
         self.object_type = object_type
-        self.part_widget_list = []
+        #self.part_widget_list = []
 
         return
 
-    def resumeWidget(self):
-        for material in self.part_list:
-            if not material.link_name:
-                self.part_widget_list.append(self.object_type(material))
-            else:
-                self.part_widget_list.append(PartLink(material))
-        return self.part_widget_list
-
-    def get_widgets(self):
-        return self.part_widget_list
+    # def resumeWidget(self):
+    #     for material in self.part_list:
+    #         if not material.link_name:
+    #             self.part_widget_list.append(self.object_type(material))
+    #         else:
+    #             self.part_widget_list.append(PartLink(material))
+    #     return self.part_widget_list
+    #
+    # def get_widgets(self):
+    #     return self.part_widget_list
 
     def append(self, freecad_object):
         if self.exist(freecad_object.Name):
@@ -118,8 +118,8 @@ class PartsList(object):
                                           name=freecad_object.Name, label=freecad_object.Label,
                                           freecad_object=freecad_object)
             self.part_list.append(material)
-            self.part_widget_list.append(self.object_type(material))
-        return self.part_list[-1], self.part_widget_list[-1]
+            #self.part_widget_list.append(self.object_type(material))
+        return self.part_list[-1]#, self.part_widget_list[-1]
 
     def append_link(self, freecad_object, freecad_object_src):
         if self.exist(freecad_object.Name):
@@ -136,9 +136,9 @@ class PartsList(object):
                 raise ValueError(freecad_object.Name + " does not have the same thickness")
 
             self.part_list.append(material)
-            self.part_widget_list.append(PartLink(material))
+            #self.part_widget_list.append(PartLink(material))
 
-        return self.part_list[-1], self.part_widget_list[-1]
+        return self.part_list[-1]#, self.part_widget_list[-1]
 
     def remove(self, name):
         found_index = None
@@ -153,7 +153,7 @@ class PartsList(object):
                 break
         if found_index is not None:
             self.part_list.pop(found_index)
-            self.part_widget_list.pop(found_index)
+            #self.part_widget_list.pop(found_index)
 
     def get_linked_parts(self, name):
         el_list = []
@@ -172,8 +172,15 @@ class PartsList(object):
     def get(self, name):
         for index in range(len(self.part_list)):
             if self.part_list[index].name == name:
-                FreeCAD.Console.PrintMessage("found " + name + "\n")
-                return self.part_list[index], self.part_widget_list[index]
+                #FreeCAD.Console.PrintMessage("found " + name + "\n")
+                material = self.part_list[index]
+                #return self.part_list[index], self.part_widget_list[index]
+                if not material.link_name:
+                    widget = self.object_type(material)
+                else:
+                    widget = PartLink(material)
+                return material, widget
+
         return None, None
 
     def __iter__(self):

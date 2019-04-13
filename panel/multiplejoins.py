@@ -42,6 +42,7 @@ class MultipleJoinGroup:
         obj.addProperty('App::PropertyPythonObject', 'parts').parts = PropertiesList()
         obj.addProperty('App::PropertyPythonObject', 'faces').faces = PropertiesList()
         obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
+        obj.addProperty('App::PropertyPythonObject', 'preview').preview = False
         obj.addProperty('App::PropertyLinkList', 'generatedParts').generatedParts = []
         obj.addProperty('App::PropertyLinkList', 'fromParts').fromParts = []
         obj.addProperty('App::PropertyPythonObject', 'edit').edit = False
@@ -51,6 +52,8 @@ class MultipleJoinGroup:
     def onChanged(self, fp, prop):
         if prop == "recompute":
             self.execute(fp)
+        elif prop == "preview":
+            self.preview(fp)
         elif prop == "edit":
             self.editMode(fp)
 
@@ -69,6 +72,46 @@ class MultipleJoinGroup:
                 obj.ViewObject.hide()
             for obj in fp.generatedParts:
                 obj.ViewObject.show()
+
+    def preview(self, fp):
+        if fp.preview:
+            fp.preview = False
+
+            document = fp.Document
+            preview_doc_name = str(fp.Name) + "_preview_parts"
+            new_doc = False
+            try:
+                preview_doc = FreeCAD.getDocument(preview_doc_name)
+                objs = preview_doc.Objects
+                for obj in objs:
+                    preview_doc.removeObject(obj.Name)
+            except:
+                new_doc = True
+                preview_doc = FreeCAD.newDocument(preview_doc_name)
+
+            parts = []
+            tabs = []
+            for part in fp.parts.lst:
+                cp_part = copy.deepcopy(part)
+                freecad_obj = document.getObject(cp_part.name)
+                cp_part.recomputeInit(freecad_obj)
+                parts.append(cp_part)
+
+            for tab in fp.faces.lst:
+                cp_tab = copy.deepcopy(tab)
+                freecad_obj = document.getObject(cp_tab.freecad_obj_name)
+                freecad_face = document.getObject(cp_tab.freecad_obj_name).Shape.getElement(cp_tab.face_name)
+                cp_tab.recomputeInit(freecad_obj, freecad_face)
+                tabs.append(cp_tab)
+
+            computed_parts = make_tabs_joins(parts, tabs)
+            for part in computed_parts:
+                new_shape = preview_doc.addObject("Part::Feature", part.get_new_name())
+                new_shape.Shape = part.get_shape()
+            preview_doc.recompute()
+            if new_doc:
+                FreeCADGui.getDocument(preview_doc.Name).ActiveView.fitAll()
+
 
     def execute(self, fp):
         if fp.recompute:
@@ -183,7 +226,7 @@ class MultipleJoins(TreePanel):
         self.obj_join.edit = True
 
     def accept(self):
-        self.compute()
+        self.compute(False)
         return True
 
     def reject(self):
@@ -192,10 +235,19 @@ class MultipleJoins(TreePanel):
         self.obj_join.edit = False
         return True
 
-    def compute(self):
+    def preview(self):
+        self.compute(True)
+        #self.force_current_selection()
+        self.selection_changed(None, None)
+        return
+
+    def compute(self, preview):
         self.save_items_properties()
         self.save_link_properties()
-        self.obj_join.recompute = True
+        if not preview:
+            self.obj_join.recompute = True
+        else:
+            self.obj_join.preview = True
 
 class MultipleCommand:
 
@@ -205,7 +257,7 @@ class MultipleCommand:
     def GetResources(self):
         return {'Pixmap': os.path.join(iconPath, 'one_tab.xpm'),  # the name of a svg file available in the resources
                 'MenuText': "Slots",
-                'ToolTip': "Slots"}
+                'ToolTip': "Interlocking"}
 
     def IsActive(self):
         return True

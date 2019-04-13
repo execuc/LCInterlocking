@@ -158,6 +158,7 @@ class MakeRoundedBox:
 
         self.actual_parts = []
         self.document = FreeCAD.ActiveDocument
+        self.preview()
         return
 
     def accept(self):
@@ -172,7 +173,8 @@ class MakeRoundedBox:
         return True
 
     def preview(self):
-        self.box_properties.get_properties()
+        self.box_properties.get_properties().compute_information()
+        self.box_properties.update_information()
         self.bottom_box_param.get_properties()
         self.top_box_param.get_properties()
         self.obj_box.recompute = True

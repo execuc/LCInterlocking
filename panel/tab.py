@@ -135,13 +135,13 @@ class TabsList(object):
         self.faces_widget_list = []
         return
 
-    def resumeWidget(self):
-        for face in self.faces:
-            if not face.link_name:
-                self.faces_widget_list.append(self.createWidgetFromTabProperties(face))
-            else:
-                self.faces_widget_list.append(TabLink(face))
-        return self.faces_widget_list
+    # def resumeWidget(self):
+    #     for face in self.faces:
+    #         if not face.link_name:
+    #             self.faces_widget_list.append(self.createWidgetFromTabProperties(face))
+    #         else:
+    #             self.faces_widget_list.append(TabLink(face))
+    #     return self.faces_widget_list
 
     def createWidgetFromTabProperties(self, tab_properties):
         widget = None
@@ -153,8 +153,8 @@ class TabsList(object):
             widget = TSlotWidget(tab_properties)
         elif tab_type == TabProperties.TYPE_CONTINUOUS:
             widget = TabContinuousWidget(tab_properties)
-        elif tab_type == TabProperties.TYPE_FLEX:
-            widget = TabFlexWidget(tab_properties)
+        #elif tab_type == TabProperties.TYPE_FLEX:
+        #    widget = TabFlexWidget(tab_properties)
         else:
             raise ValueError("Unkonwn type of tab")
 
@@ -170,10 +170,10 @@ class TabsList(object):
         if self.exist(tab_properties.tab_name):
             raise ValueError(tab_properties.tab_name + " already in interactor tabs list")
 
-        widget = self.createWidgetFromTabProperties(tab_properties)
+        #widget = self.createWidgetFromTabProperties(tab_properties)
         self.faces.append(tab_properties)
-        self.faces_widget_list.append(widget)
-        return self.faces[-1], self.faces_widget_list[-1]
+        #self.faces_widget_list.append(widget)
+        return self.faces[-1]#, self.faces_widget_list[-1]
 
     def append_link(self, face, src_tab_name):
         src_tab_element, widget = self.get(src_tab_name)
@@ -190,8 +190,8 @@ class TabsList(object):
             raise ValueError(tab_properties.tab_name + " already in interactor tabs list")
 
         self.faces.append(tab_properties)
-        self.faces_widget_list.append(TabLink(tab_properties))
-        return self.faces[-1], self.faces_widget_list[-1]
+        #self.faces_widget_list.append(TabLink(tab_properties))
+        return self.faces[-1]#, self.faces_widget_list[-1]
 
     def remove(self, name):
         found_index = None
@@ -206,7 +206,6 @@ class TabsList(object):
 
         if found_index is not None:
             self.faces.pop(found_index)
-            self.faces_widget_list.pop(found_index)
 
     def exist(self, name):
         for part in self.faces:
@@ -215,11 +214,18 @@ class TabsList(object):
         return False
 
     def get(self, name):
-        FreeCAD.Console.PrintMessage("get " + name + "\n")
+        #FreeCAD.Console.PrintMessage("get " + name + "\n")
         for index in range(len(self.faces)):
             if self.faces[index].tab_name == name:
-                FreeCAD.Console.PrintMessage("found " + name + "\n")
-                return self.faces[index], self.faces_widget_list[index]
+                #FreeCAD.Console.PrintMessage("found " + name + "\n")
+                face = self.faces[index]
+                if not face.link_name:
+                    widget = self.createWidgetFromTabProperties(face)
+                else:
+                    widget = self.faces_widget_list.append(TabLink(face))
+                return face, widget
+
+
         return None, None
 
     def get_linked_tabs(self, name):
