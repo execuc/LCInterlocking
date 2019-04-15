@@ -487,6 +487,18 @@ def assemble_list_element(el_list):
     return part
 
 
+#Use this function only for preview
+# See Warning at https://www.freecadweb.org/wiki/Part_MakeCompound :
+# "A compound containing pieces that intersect or touch is invalid
+# for Boolean operations. Because of performance issues, checking
+# if the pieces intersect is not done. Automatic geometry check
+# (available for Boolean operations) is disabled for part compound as well."
+def assemble_list_element_fast(el_list):
+    if len(el_list) == 0:
+        return None
+    return Part.makeCompound(el_list)
+
+
 class MaterialElement:
     def __init__(self, properties):
         self.properties = properties
@@ -503,8 +515,11 @@ class MaterialElement:
     def get_new_name(self):
         return self.properties.new_name
 
-    def get_shape(self):
-        part = assemble_list_element(self.toAdd)
+    def get_shape(self, fast_assemble=False):
+        if not fast_assemble:
+            part = assemble_list_element(self.toAdd)
+        else:
+            part = assemble_list_element_fast(self.toAdd)
         new_shape = self.properties.freecad_object.Shape
         if part is not None:
             new_shape = new_shape.fuse(part)

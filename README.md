@@ -47,8 +47,11 @@ Some videos on older module version
  
  Change notes
 --------------------
-**v1.0:**
+**v1.1:**
+ * Restore crosspiece dog bones and node options.
+ * Add fast preview option for interlocking tool.
 
+**v1.0:**
  * Add a preview button to interlocking and crosspiece tool.
  * All tools can now be reedited.
  * Add support to Python 3 of Freecad 0.18.

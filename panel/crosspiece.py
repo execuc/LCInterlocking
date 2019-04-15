@@ -28,7 +28,7 @@ import FreeCADGui
 from FreeCAD import Gui, Matrix
 import os
 from lasercut.crosspart import make_cross_parts
-from panel.treepanel import TreePanel
+from panel.treepanel import TreePanel, PREVIEW_NONE, PREVIEW_NORMAL, PREVIEW_FAST
 from panel.propertieslist import PropertiesList
 import json
 import copy
@@ -42,7 +42,7 @@ class CrossPieceGroup:
     def __init__(self, obj):
         obj.addProperty('App::PropertyPythonObject', 'parts').parts = PropertiesList()
         obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
-        obj.addProperty('App::PropertyPythonObject', 'preview').preview = False
+        obj.addProperty('App::PropertyPythonObject', 'preview').preview = PREVIEW_NONE
         obj.addProperty('App::PropertyLinkList', 'generatedParts').generatedParts = []
         obj.addProperty('App::PropertyLinkList', 'fromParts').fromParts = []
         obj.addProperty('App::PropertyPythonObject', 'edit').edit = False
@@ -52,6 +52,8 @@ class CrossPieceGroup:
     def onChanged(self, fp, prop):
         if prop == "recompute":
             self.execute(fp)
+        elif prop == "preview":
+            self.preview(fp)
         elif prop == "edit":
             self.editMode(fp)
 
@@ -70,6 +72,39 @@ class CrossPieceGroup:
                 obj.ViewObject.hide()
             for obj in fp.generatedParts:
                 obj.ViewObject.show()
+
+    def preview(self, fp):
+        if fp.preview != PREVIEW_NONE:
+            fp.preview = PREVIEW_NONE
+
+            document = fp.Document
+            preview_doc_name = str(fp.Name) + "_preview_parts"
+            new_doc = False
+            try:
+                preview_doc = FreeCAD.getDocument(preview_doc_name)
+                objs = preview_doc.Objects
+                for obj in objs:
+                    preview_doc.removeObject(obj.Name)
+            except:
+                new_doc = True
+                preview_doc = FreeCAD.newDocument(preview_doc_name)
+
+            parts = []
+            tabs = []
+            for part in fp.parts.lst:
+                cp_part = copy.deepcopy(part)
+                freecad_obj = document.getObject(cp_part.name)
+                cp_part.recomputeInit(freecad_obj)
+                parts.append(cp_part)
+
+            computed_parts = make_cross_parts(parts)
+            for part in computed_parts:
+                new_shape = preview_doc.addObject("Part::Feature", part.get_new_name())
+                new_shape.Shape = part.get_shape()
+            preview_doc.recompute()
+            if new_doc:
+                FreeCADGui.getDocument(preview_doc.Name).ActiveView.fitAll()
+
 
     def execute(self, fp):
         if fp.recompute:
@@ -174,8 +209,7 @@ class CrossPiece(TreePanel):
         self.obj_join.edit = True
 
     def accept(self):
-        self.compute()
-
+        self.compute(False)
         return True
 
     def reject(self):
@@ -183,12 +217,34 @@ class CrossPiece(TreePanel):
         self.obj_join.edit = False
         return True
 
-    def compute(self):
+    def compute(self, preview):
         self.save_items_properties()
         self.save_link_properties()
-        self.obj_join.recompute = True
+        if not preview:
+            self.obj_join.recompute = True
+        else:
+            self.obj_join.preview = PREVIEW_NORMAL
+
+    def preview(self):
+        self.compute(True)
+        self.selection_changed(None, None)
+        return
 
     def init_tree_widget(self):
+        #Preview button
+        v_box = QtGui.QVBoxLayout(self.tree_widget)
+        preview_button = QtGui.QPushButton('Preview', self.tree_widget)
+        preview_button.clicked.connect(self.preview)
+        #self.fast_preview = QtGui.QCheckBox("Fast preview", self.tree_widget)
+        line = QtGui.QFrame(self.tree_widget)
+        line.setFrameShape(QtGui.QFrame.HLine);
+        line.setFrameShadow(QtGui.QFrame.Sunken);
+        h_box = QtGui.QHBoxLayout(self.tree_widget)
+        h_box.addWidget(preview_button)
+        #h_box.addWidget(self.fast_preview)
+        v_box.addLayout(h_box)
+        v_box.addWidget(line)
+        self.tree_vbox.addLayout(v_box)
         # Add part buttons
         h_box = QtGui.QHBoxLayout(self.tree_widget)
         add_parts_button = QtGui.QPushButton('Add parts', self.tree_widget)

@@ -35,6 +35,12 @@ from lasercut.tabproperties import TabProperties
 from panel.treeview import TreeModel, TreeItem
 from panel.propertieslist import PropertiesList
 
+
+PREVIEW_NONE = 0
+PREVIEW_NORMAL = 1
+PREVIEW_FAST = 2
+
+
 class TreePanel(object):
 
     def __init__(self, title, obj_join = None): #none to be removed
@@ -46,7 +52,10 @@ class TreePanel(object):
         else:
             self.faces = PropertiesList()
 
-        self.partsList = PartsList(Part, self.parts)
+        if title != "Crosspiece":
+            self.partsList = PartsList(Part, self.parts)
+        else:
+            self.partsList = PartsList(CrossPartWidget, self.parts)
         self.tabsList = TabsList(self.faces)
 
         self.params_widget = None
@@ -73,19 +82,9 @@ class TreePanel(object):
         self.edit_items_layout = None
         self.init_tree_widget()
         self.preview_doc = None
-        #self._preview_button = None
         self.show_other_state_checkbox = None
         self.other_object_list = []
         self.save_initial_objects()
-        #self.init_params()
-
-        #items_list = self.partsList.resumeWidget()
-        #for item in items_list:
-        #    self.model.append_part(item.name, item.label, bool(item.link_name))
-
-        #items_list = self.tabsList.resumeWidget()
-        #for item in items_list:
-        #    self.model.append_tab(item.obj_name, item.tab_name, item.name, bool(item.link_name))
 
         for item in self.parts:
             self.model.append_part(item.name, item.label, bool(item.link_name))
@@ -105,12 +104,15 @@ class TreePanel(object):
     def init_tree_widget(self):
         v_box = QtGui.QVBoxLayout(self.tree_widget)
         preview_button = QtGui.QPushButton('Preview', self.tree_widget)
-        #self.tree_vbox.addWidget(preview_button)
-        preview_button.clicked.connect(self.preview)
+        preview_button.clicked.connect(self.abs_preview)
+        self.fast_preview = QtGui.QCheckBox("Fast preview", self.tree_widget)
         line = QtGui.QFrame(self.tree_widget)
         line.setFrameShape(QtGui.QFrame.HLine);
         line.setFrameShadow(QtGui.QFrame.Sunken);
-        v_box.addWidget(preview_button)
+        h_box = QtGui.QHBoxLayout(self.tree_widget)
+        h_box.addWidget(preview_button)
+        h_box.addWidget(self.fast_preview)
+        v_box.addLayout(h_box)
         v_box.addWidget(line)
         self.tree_vbox.addLayout(v_box)
 
@@ -360,10 +362,13 @@ class TreePanel(object):
         parts_vbox.addWidget(preview_button,2,0,1,2)
         preview_button.clicked.connect(self.preview)
 
+    def abs_preview(self):
+        self.preview(self.fast_preview.isChecked())
+
     def compute_parts(self):
         raise ValueError("Must overloaded")
 
-    def preview(self):
+    def preview(self, fast=False):
         raise ValueError("Must overloaded")
 
     def save_initial_objects(self):

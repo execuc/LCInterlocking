@@ -28,7 +28,7 @@ import FreeCADGui
 from FreeCAD import Gui, Matrix
 import os
 from lasercut.join import make_tabs_joins
-from panel.treepanel import TreePanel
+from panel.treepanel import TreePanel, PREVIEW_NONE, PREVIEW_NORMAL, PREVIEW_FAST
 from panel.propertieslist import PropertiesList
 import json
 import copy
@@ -42,7 +42,7 @@ class MultipleJoinGroup:
         obj.addProperty('App::PropertyPythonObject', 'parts').parts = PropertiesList()
         obj.addProperty('App::PropertyPythonObject', 'faces').faces = PropertiesList()
         obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
-        obj.addProperty('App::PropertyPythonObject', 'preview').preview = False
+        obj.addProperty('App::PropertyPythonObject', 'preview').preview = PREVIEW_NONE
         obj.addProperty('App::PropertyLinkList', 'generatedParts').generatedParts = []
         obj.addProperty('App::PropertyLinkList', 'fromParts').fromParts = []
         obj.addProperty('App::PropertyPythonObject', 'edit').edit = False
@@ -74,8 +74,11 @@ class MultipleJoinGroup:
                 obj.ViewObject.show()
 
     def preview(self, fp):
-        if fp.preview:
-            fp.preview = False
+        if fp.preview != PREVIEW_NONE:
+            fast = False
+            if fp.preview == PREVIEW_FAST:
+                fast = True
+            fp.preview = PREVIEW_NONE
 
             document = fp.Document
             preview_doc_name = str(fp.Name) + "_preview_parts"
@@ -107,7 +110,7 @@ class MultipleJoinGroup:
             computed_parts = make_tabs_joins(parts, tabs)
             for part in computed_parts:
                 new_shape = preview_doc.addObject("Part::Feature", part.get_new_name())
-                new_shape.Shape = part.get_shape()
+                new_shape.Shape = part.get_shape(fast)
             preview_doc.recompute()
             if new_doc:
                 FreeCADGui.getDocument(preview_doc.Name).ActiveView.fitAll()
@@ -235,19 +238,20 @@ class MultipleJoins(TreePanel):
         self.obj_join.edit = False
         return True
 
-    def preview(self):
-        self.compute(True)
-        #self.force_current_selection()
+    def preview(self, fast=False):
+        self.compute(True, fast)
         self.selection_changed(None, None)
         return
 
-    def compute(self, preview):
+    def compute(self, preview, fast=False):
         self.save_items_properties()
         self.save_link_properties()
         if not preview:
             self.obj_join.recompute = True
+        elif not fast:
+            self.obj_join.preview = PREVIEW_NORMAL
         else:
-            self.obj_join.preview = True
+            self.obj_join.preview = PREVIEW_FAST
 
 class MultipleCommand:
 
