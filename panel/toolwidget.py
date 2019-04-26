@@ -65,8 +65,8 @@ class ParamWidget(object):
             widget_config.widget.setDecimals(widget_config.decimals)
             widget_config.widget.setSingleStep(widget_config.step)
             widget_config.widget.setMinimum(widget_config.interval_value[0])
-            widget_config.widget.setValue(self.get_property_value(widget_config.name))
             widget_config.widget.setMaximum(widget_config.interval_value[-1])
+            widget_config.widget.setValue(self.get_property_value(widget_config.name))
         elif widget_config.type == bool:
             widget_config.widget = QtGui.QCheckBox("", self.form)
             state = QtCore.Qt.Checked if self.get_property_value(widget_config.name) == True else QtCore.Qt.Unchecked

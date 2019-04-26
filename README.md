@@ -47,6 +47,9 @@ Some videos on older module version
  
  Change notes
 --------------------
+**v1.2: In progress**
+ * Fix float entry max value(99.99) bug.
+ 
 **v1.1:**
  * Restore crosspiece dog bones and node options.
  * Add fast preview option for interlocking tool.
