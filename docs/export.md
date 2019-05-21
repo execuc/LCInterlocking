@@ -18,3 +18,9 @@ remove this call in exportPanel.py.
 
  * The export / inkscape step can be seen on at the end of a video about an older version of the module (https://youtu.be/YGFIdLpdWXE).
 
+**Note (2019-05-21) :**
+Some elements of projected parts have problems. For example, a circle may be displayed and exported 
+in flatten SVG as hexagon. 
+A workaround is to export in Autodesk DXF 2D (.dxf) format. It may be imported as inkscape but elements
+can not be ungrouped. To do it, dxf file has to be opened in librecad, then select all (Ctrl+a) and click on Tools ->
+Modify -> explode. Save file and re-import with inkscape. Now each segments and curves can be edited.  

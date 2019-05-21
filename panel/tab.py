@@ -222,7 +222,7 @@ class TabsList(object):
                 if not face.link_name:
                     widget = self.createWidgetFromTabProperties(face)
                 else:
-                    widget = self.faces_widget_list.append(TabLink(face))
+                    widget = TabLink(face)
                 return face, widget
 
 

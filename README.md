@@ -47,7 +47,10 @@ Some videos on older module version
  
  Change notes
 --------------------
-**v1.2: In progress**
+**v1.3: In progress**
+ * Fix tab link widget not displayed.
+
+**v1.2:**
  * Fix float entry max value(99.99) bug.
  
 **v1.1:**
