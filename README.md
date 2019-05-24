@@ -72,3 +72,4 @@ If you encounter a bug please participate in the [dedicated FreeCAD discussion t
 ![Illustration](docs/imgs/illustration3.png)
 
 ## License
+LGPL v2.1
