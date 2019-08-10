@@ -316,7 +316,7 @@ def remove_intersections(first_part, second_part, referential_faces, axis, inver
 #            ---------------------------> X
 # X is the width of part 2.
 # Y is the width of part 1.
-# Z is the heigt of the intersection
+# Z is the height of the intersection
 def make_cross_parts(parts):
     parts_element = []
     for part in parts:

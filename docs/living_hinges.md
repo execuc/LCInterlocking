@@ -1,7 +1,7 @@
 Living hinges
 ===========
 
-This tool is used to make curved laser bend surface. Faces of oriented part which follow are flatened and linked with living hinges. Actually curved part must have its radius center equidistant from faces.
+This tool is used to make curved laser bend surface. Faces of oriented part which follow are flattened and linked with living hinges. Actually curved part must have its radius center equidistant from faces.
 
 Procedure
 -------------
