@@ -156,7 +156,7 @@ class TabsList(object):
         #elif tab_type == TabProperties.TYPE_FLEX:
         #    widget = TabFlexWidget(tab_properties)
         else:
-            raise ValueError("Unkonwn type of tab")
+            raise ValueError("Unknown type of tab")
 
         return widget
 

@@ -3,7 +3,7 @@ Interlocking
 
 This is the main tool of the LCInterlocking module. It allows to define connections between parts to create tabs and slots.
 
-Parts can come from the Freecad Part/Part Desgin workshops or from the box generator tool of this module for example. To create a connection, the faces must stick.
+Parts can come from the Freecad Part/Part Design workshops or from the box generator tool of this module for example. To create a connection, the faces must stick.
 
 There are three type of connections : tab, continuous tab and screw. <br>
 ![Illustration](imgs/interlocking/tab.png) <br>
@@ -49,5 +49,5 @@ Additional Information
   * Interlocking properties can be edited again clicking on "MultiJoin" group item.
   * In editing mode, parts and faces can can be visualized by selecting the in the treview of the tools. Then they can be displayed/hidden by tapping in the key "space".
   * Preview button allow to create a new document with interlocking parts without exiting tool. It's convenient to adjust connection parameters.
-  * "Add same faces" works as "Add same parts", faces while share te same connection properties. 
+  * "Add same faces" works as "Add same parts", faces while share the same connection properties. 
   
