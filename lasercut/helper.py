@@ -154,9 +154,7 @@ def transform(part, referentiel_face, transform_matrix=None, y_invert = False):
 # http://gamedev.stackexchange.com/questions/20097/how-to-calculate-a-3x3-rotation-matrix-from-2-direction-vectors
 # http://www.freecadweb.org/api/Vector.html
 def get_matrix_transform(face):
-    x_local, y_local_not_normalized, z_local_not_normalized = get_local_axis(face)
-    y_local = y_local_not_normalized.normalize()
-    z_local = z_local_not_normalized.normalize()
+    x_local, y_local, z_local = get_local_axis_normalized(face)
 
     m = FreeCAD.Matrix()
     if z_local is not None:
