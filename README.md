@@ -25,24 +25,34 @@ This panel appears when "Laser cut Interlocking" module is selected:
 
 ## Installation
 
+### Recommended Install
+Install this Addon via the builtin [FreeCAD Addon Manager](https://github.com/FreeCAD/FreeCAD-addons#1-builtin-addon-manager).  
+1. Locate LCInterlocking in the Addon Manager
+2. Install
+3. Restart FreeCAD  
+**Result**: 'Laser cut Interlocking' will be available via the workbench dropdown menu.
+
 ### Manual Install
-Download the repository as zip via the Github interface or (**recommended**) use `git` to clone the repo via the command line using:   
-```
+<details>
+<summary><i>Expand this to read more about manual installation of LCInterlocking FreeCAD Addon</i></summary>
+  
+1. Download the repository as zip via the Github interface or use `git` to clone the repo via the command line using:  
+```bash
   git clone https://github.com/execuc/LCInterlocking .
 ```
-
-After the download completes, the module must be moved to the `Mod` subfolder of the Freecad install directory. 
+2. After the download completes, the module must be moved to the `Mod` subfolder of the Freecad install directory.  
 On Ubuntu 16.04 move the module to `/usr/share/freecad-daily/Mod/`  
-In Windows it will probably be something like `C:\Program Files\FreeCAD\Mod`   
+In Windows it will probably be something like `C:\Program Files\FreeCAD\Mod`  
 On Debian 9, the Mod directory is in `~/.FreeCAD/Mod/`
 
-Restart Freecad and the LCInterlocking module should be detected.
+3. Restart Freecad and the LCInterlocking module should be detected.
+</details>
 
 ## Troubleshooting Tip
 It is advisable to show the FreeCAD report view and to redirect the python errors to show module warning/error.
 
 ## Feedback
-If you encounter a bug please participate in the [dedicated FreeCAD discussion thread]() and open a ticket in this repo's issue queue
+If you encounter a bug please participate in the [dedicated FreeCAD discussion thread](https://forum.freecadweb.org/viewtopic.php?f=8&t=41196) and open a ticket in this repo's issue queue.
 
 ## Some videos previous versions
  * Box generator/interlocking/inkscape: https://youtu.be/YGFIdLpdWXE
