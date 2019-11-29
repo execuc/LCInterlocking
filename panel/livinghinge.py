@@ -107,7 +107,7 @@ class LivingHingesPanel:
         for conn in self.connection_widget_list:
             conn.get_properties()
 
-        self.obj.recompute = True
+        self.obj.need_recompute = True
 
     def create_object(self, document, flat_part, solid_part):
         if self.global_properties_widget.get_properties().generate_solid is True:
@@ -183,18 +183,18 @@ class LivingHinges:
     def __init__(self, obj, freecad_obj):
         obj.addProperty('App::PropertyPythonObject', 'globalProperties').globalProperties = GlobalLivingMaterialProperties(freecad_object=freecad_obj)
         obj.addProperty('App::PropertyPythonObject', 'hinges').hinges = PropertiesList()
-        obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
+        obj.addProperty('App::PropertyPythonObject', 'need_recompute').need_recompute = False
         obj.addProperty('App::PropertyLink', 'solid').solid = None
         obj.addProperty('App::PropertyLink', 'obj').obj = None
         obj.Proxy = self
 
     def onChanged(self, fp, prop):
-        if prop == "recompute":
+        if prop == "need_recompute":
             self.execute(fp)
 
     def execute(self, fp):
-        if fp.recompute:
-            fp.recompute = False
+        if fp.need_recompute:
+            fp.need_recompute = False
 
             document = fp.Document
 

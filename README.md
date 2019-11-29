@@ -62,7 +62,10 @@ If you encounter a bug please participate in the [dedicated FreeCAD discussion t
  * Rounded corner: https://www.youtube.com/watch?v=KSnMxqjA_-Q
  
 ## Changelog
-**v1.3: In progress**
+**v1.4: In progress**
+ * Fix for FreeCAD 0.19.
+
+**v1.3:**
  * Fix tab link widget not displayed.
 
 **v1.2:**

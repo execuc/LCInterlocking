@@ -41,7 +41,7 @@ iconPath = os.path.join(__dir__, '../icons')
 class CrossPieceGroup:
     def __init__(self, obj):
         obj.addProperty('App::PropertyPythonObject', 'parts').parts = PropertiesList()
-        obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
+        obj.addProperty('App::PropertyPythonObject', 'need_recompute').need_recompute = False
         obj.addProperty('App::PropertyPythonObject', 'preview').preview = PREVIEW_NONE
         obj.addProperty('App::PropertyLinkList', 'generatedParts').generatedParts = []
         obj.addProperty('App::PropertyLinkList', 'fromParts').fromParts = []
@@ -50,7 +50,7 @@ class CrossPieceGroup:
         obj.Proxy = self
 
     def onChanged(self, fp, prop):
-        if prop == "recompute":
+        if prop == "need_recompute":
             self.execute(fp)
         elif prop == "preview":
             self.preview(fp)
@@ -107,8 +107,8 @@ class CrossPieceGroup:
 
 
     def execute(self, fp):
-        if fp.recompute:
-            fp.recompute = False
+        if fp.need_recompute:
+            fp.need_recompute = False
 
             document = fp.Document
             if len(fp.fromParts) > 0:
@@ -221,7 +221,7 @@ class CrossPiece(TreePanel):
         self.save_items_properties()
         self.save_link_properties()
         if not preview:
-            self.obj_join.recompute = True
+            self.obj_join.need_recompute = True
         else:
             self.obj_join.preview = PREVIEW_NORMAL
 
