@@ -26,6 +26,8 @@ This panel appears when "Laser cut Interlocking" module is selected:
 ## Installation
 
 ### Recommended Install
+[![FreeCAD Addon manager status](https://img.shields.io/badge/FreeCAD%20addon%20manager-available-brightgreen)](https://github.com/FreeCAD/FreeCAD-addons)
+
 Install this Addon via the builtin [FreeCAD Addon Manager](https://github.com/FreeCAD/FreeCAD-addons#1-builtin-addon-manager).  
 1. Locate LCInterlocking in the Addon Manager
 2. Install
