@@ -105,3 +105,8 @@ class TabProperties(helper.ObjectProperties):
         self.thickness = thickness.Length
         self.y_length = y_length.Length
         self.transform_matrix = helper.get_matrix_transform(freecad_face)
+
+        transform_group = freecad_obj.getParentGeoFeatureGroup()
+        while transform_group is not None:
+            self.transform_matrix = transform_group.Placement.toMatrix() * self.transform_matrix
+            transform_group = transform_group.getParentGeoFeatureGroup()

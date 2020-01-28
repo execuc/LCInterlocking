@@ -162,6 +162,7 @@ def tab_join_create_tab_on_face(material_face, material_plane, width, pos_y, tab
 
 def make_tab_join(tab, tab_part, other_parts):
     slots_pos = get_slot_positions(tab)
+    did_any_work = False
     for i, y in enumerate(slots_pos):
         for part_interactor in other_parts:
             tab_to_add, tab_dog_bone = tab_join_create_tab_on_face(tab_part.properties, part_interactor.properties,
@@ -170,6 +171,7 @@ def make_tab_join(tab, tab_part, other_parts):
                                                                             part_interactor.properties)
 
             if intersect_test:
+                did_any_work = True
                 tab_part.toAdd.append(tab_to_add_transformed)
                 if tab_dog_bone:
                     tab_part.toRemove.append(helper.transform_part(tab_dog_bone, tab))
@@ -177,6 +179,9 @@ def make_tab_join(tab, tab_part, other_parts):
                                                             part_interactor.properties, tab.dog_bone)
                 part_interactor.toRemove.append(helper.transform_part(hole, tab))
                 break
+
+    if not did_any_work:
+        FreeCAD.Console.PrintWarning("Tab on part " + tab_part.get_name() + " did not apply\n")
     return
 
 

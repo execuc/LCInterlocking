@@ -99,6 +99,8 @@ class MultipleJoinGroup:
                 freecad_obj = document.getObject(cp_part.name)
                 cp_part.recomputeInit(freecad_obj)
                 parts.append(cp_part)
+                FreeCAD.Console.PrintMessage("Will use part " + cp_part.name + "\n")
+                FreeCAD.Console.PrintMessage(" Transform is " + str(cp_part.freecad_object.Placement) + " vs " + str(part) + "\n")
 
             for tab in fp.faces.lst:
                 cp_tab = copy.deepcopy(tab)
@@ -106,6 +108,7 @@ class MultipleJoinGroup:
                 freecad_face = document.getObject(cp_tab.freecad_obj_name).Shape.getElement(cp_tab.face_name)
                 cp_tab.recomputeInit(freecad_obj, freecad_face)
                 tabs.append(cp_tab)
+                FreeCAD.Console.PrintMessage("Will create tab on face " + cp_tab.freecad_obj_name + "::" + cp_tab.face_name + "\n")
 
             computed_parts = make_tabs_joins(parts, tabs)
             for part in computed_parts:
