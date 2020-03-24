@@ -57,11 +57,15 @@ static char * laser_xpm[] = {
         import ExportPanel
         import MakeBoxPanel
         import MakeRoundedBoxPanel
+        from LasercutterTechdrawExport import LasercutterTechdrawExport
         from panel import multiplejoins, crosspiece, livinghinge
         all_command = ["make_box_command", "multiple_tabs_command", "crosspiece"]
+        hinge = ["make_rounded_box_command", "livinghinge"]
+        export = ["export_command", "LasercutterTechdrawExport"]
         self.appendToolbar("Tab", all_command)
-        self.appendToolbar("Hinge", ["make_rounded_box_command", "livinghinge"])
-        self.appendToolbar("Export", ["export_command"])
+        self.appendToolbar("Hinge", hinge)
+        self.appendToolbar("Export", export)
+        self.appendMenu("LCInterlocking", all_command + hinge + export)
 
  
     def Activated(self):
