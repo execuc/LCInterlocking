@@ -45,17 +45,17 @@ class GroupRoundedBox:
         obj.addProperty("App::PropertyPythonObject", "box_properties").box_properties = RoundedBoxProperties()
         obj.addProperty("App::PropertyPythonObject", "top_properties").top_properties = TopBottomRoundedProperties()
         obj.addProperty("App::PropertyPythonObject", "bottom_properties").bottom_properties = TopBottomRoundedProperties()
-        obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
+        obj.addProperty('App::PropertyPythonObject', 'need_recompute').need_recompute = False
         obj.addProperty('App::PropertyLinkList', 'parts').parts= []
         obj.Proxy = self
 
     def onChanged(self, fp, prop):
-        if prop == "recompute":
+        if prop == "need_recompute":
             self.execute(fp)
 
     def execute(self, fp):
-        if fp.recompute:
-            fp.recompute = False
+        if fp.need_recompute:
+            fp.need_recompute = False
 
             document = fp.Document
             computed_parts = makeroundedbox.make_rounded_box(fp.box_properties, fp.top_properties, fp.bottom_properties)
@@ -169,7 +169,7 @@ class MakeRoundedBox:
         self.obj_box.box_properties = self.box_properties_origin
         self.obj_box.bottom_properties = self.bottom_properties_origin
         self.obj_box.top_properties = self.top_properties_origin
-        self.obj_box.recompute = True
+        self.obj_box.need_recompute = True
         return True
 
     def preview(self):
@@ -177,7 +177,7 @@ class MakeRoundedBox:
         self.box_properties.update_information()
         self.bottom_box_param.get_properties()
         self.top_box_param.get_properties()
-        self.obj_box.recompute = True
+        self.obj_box.need_recompute = True
 
 
 class MakeRoundedBoxCommand:

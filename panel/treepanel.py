@@ -28,6 +28,11 @@ import FreeCADGui
 from FreeCAD import Gui
 import os, copy
 from PySide import QtCore, QtGui
+try:
+    from PySide.QtGui import QItemSelectionModel
+except ImportError:
+    from PySide.QtCore import QItemSelectionModel
+
 from panel.partmat import PartsList, CrossPartWidget, Part
 from panel.tab import TabsList
 from panel import selection
@@ -277,7 +282,7 @@ class TreePanel(object):
 
     def force_selection(self, index):
         self.selection_model.clearSelection()
-        self.selection_model.select(index, QtGui.QItemSelectionModel.ClearAndSelect | QtGui.QItemSelectionModel.Rows)
+        self.selection_model.select(index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
     def selection_changed(self, selected, deselected):
         FreeCADGui.Selection.clearSelection()

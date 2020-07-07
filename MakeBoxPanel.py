@@ -43,17 +43,17 @@ class GroupBox:
         obj.addProperty("App::PropertyPythonObject", "box_properties").box_properties = BoxProperties()  # supported  https://www.freecadweb.org/wiki/Scripted_objects
         obj.addProperty("App::PropertyPythonObject", "top_properties").top_properties = TopBottomProperties()
         obj.addProperty("App::PropertyPythonObject", "bottom_properties").bottom_properties = TopBottomProperties()
-        obj.addProperty('App::PropertyPythonObject', 'recompute').recompute = False
+        obj.addProperty('App::PropertyPythonObject', 'need_recompute').need_recompute = False
         obj.addProperty('App::PropertyLinkList', 'parts').parts = []
         obj.Proxy = self
 
     def onChanged(self, fp, prop):
-        if prop == "recompute":
+        if prop == "need_recompute":
             self.execute(fp)
 
     def execute(self, fp):
-        if fp.recompute:
-            fp.recompute = False
+        if fp.need_recompute:
+            fp.need_recompute = False
 
             document = fp.Document
             computed_parts = makebox.make_box(fp.box_properties, fp.top_properties, fp.bottom_properties)
@@ -161,7 +161,7 @@ class MakeBox:
         self.obj_box.box_properties = self.box_properties_origin
         self.obj_box.bottom_properties = self.bottom_properties_origin
         self.obj_box.top_properties = self.top_properties_origin
-        self.obj_box.recompute = True
+        self.obj_box.need_recompute = True
         return True
 
     def preview(self):
@@ -169,7 +169,7 @@ class MakeBox:
         self.dim_box_param.get_properties()
         self.top_box_param.get_properties()
         self.bottom_box_param.get_properties()
-        self.obj_box.recompute = True
+        self.obj_box.need_recompute = True
 
 
 class MakeBoxCommand:
