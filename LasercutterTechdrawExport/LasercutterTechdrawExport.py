@@ -7,22 +7,23 @@ __doc__ = "Creates contour lines with for all selected objects and arranges them
 
 import os
 import FreeCADGui
-import FreeCAD
-from FreeCAD import Vector
+import FreeCAD as app
+from FreeCAD import Vector, Rotation
 import Part
 import Draft
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, '../icons')
-    
-class LasercutterTechdrawExportWorker:
+        
+class LasercutterTechdrawExportItem:
     def __init__(self, 
                  fp,    # an instance of Part::FeaturePython
-                 TechdrawPage = None,
-                 Parts = [],
-                 BeamWidth = 0.2):
-        fp.addProperty("App::PropertyLink", "TechdrawPage",  "LasercutterTechdrawExport",  "Selected parts").TechdrawPage = TechdrawPage
-        fp.addProperty("App::PropertyLinkList", "Parts",  "LasercutterTechdrawExport",  "Selected parts").Parts = Parts
+                 Part = None,
+                 BeamWidth = 0.2,
+                 Normal = Vector(0, 0, 1)):
+        self.updating = False
+        fp.addProperty("App::PropertyLink", "Part",  "LasercutterTechdrawExport",  "Selected part").Part = Part
+        fp.addProperty("App::PropertyVector", "Normal",  "LasercutterTechdrawExport",  "What the heck is normal ?").Normal = Normal
         fp.addProperty("App::PropertyFloat", "BeamWidth", "LasercutterTechdrawExport",  "Laser beam width in mm").BeamWidth = BeamWidth
         fp.Proxy = self
 #        if len(Parts) == 0:
@@ -31,15 +32,63 @@ class LasercutterTechdrawExportWorker:
     
     def execute(self, fp):
         '''Do something when doing a recomputation, this method is mandatory'''
-        selected_to_techdraw(fp.Parts, fp.TechdrawPage, fp.BeamWidth)
+        if fp.Part and fp.Normal and (not self.updating):
+            self.make_outline(fp)
         
     def onChanged(self, fp, prop):
         '''Do something when a property has changed'''
-        if prop == "Parts" or prop == "BeamWidth":
-            selected_to_techdraw(fp.Parts, fp.TechdrawPage, fp.BeamWidth)
-
-
-class LasercutterTechdrawExportViewProvider:
+        if prop == "Part" or prop == "BeamWidth" or prop == "Normal":
+            self.execute(fp)         
+            
+    def make_outline(self, fp): 
+        self.updating = True 
+        face = self.get_biggest_face(fp.Part)
+        if face:
+            outline = face.makeOffset2D(fp.BeamWidth / 2)
+            if fp.Normal == Vector(0, 0, 1):
+                fp.Normal = face.normalAt(0, 0)
+        else:
+            print("no face")
+            outline = part.makeOffset(fp.BeamWidth / 2)       
+            
+        fp.Shape = Part.Compound(outline.Wires);
+        fp.Label = fp.Part.Label + " offset"
+        
+        rotation_to_apply = Rotation(fp.Normal, Vector(0, 0, 1))
+        new_rotation = rotation_to_apply.multiply(fp.Placement.Rotation)
+        fp.Placement.Rotation = new_rotation
+        self.rotate_biggest_side_up(fp)
+        self.updating = False
+        
+    def get_biggest_face(self, part):
+        max_area = 0
+        for face in part.Shape.Faces:
+            if face and face.Area > max_area:
+                max_area = face.Area
+                max_face = face
+    
+        if max_face:
+            return max_face
+        
+    def rotate_biggest_side_up(self, fp):
+        bbox = fp.Shape.BoundBox
+        xmin = bbox.XLength
+        angle = 0.0
+        r = fp.Placement.Rotation
+        while angle < 180:     
+            angle = angle + 22.5       
+            rotation_to_apply = Rotation(22.5, 0.0, 0.0)
+            new_rotation = rotation_to_apply.multiply(fp.Placement.Rotation)
+            fp.Placement.Rotation = new_rotation
+    
+            if xmin > fp.Shape.BoundBox.XLength:
+                xmin = fp.Shape.BoundBox.XLength
+                r = fp.Placement.Rotation
+    
+        fp.Placement.Rotation = r
+        
+        
+class LasercutterTechdrawExportItemViewProvider:
     def __init__(self, vobj):
         '''Set this object to the proxy object of the actual view provider'''
         vobj.Proxy = self
@@ -60,7 +109,7 @@ class LasercutterTechdrawExportViewProvider:
     
     def claimChildren(self):
         '''Return a list of objects that will be modified by this feature'''
-        return self.Object.Parts + [self.Object.TechdrawPage]
+        pass
         
     def onDelete(self, feature, subelements):
         '''Here we can do something when the feature will be deleted'''
@@ -87,7 +136,7 @@ class LasercutterTechdrawExportViewProvider:
                 Since no data were serialized nothing needs to be done here.'''
         return None
         
-        
+      
 class LCTaskPanel:
     def __init__(self, fp):
         self.fp = fp
@@ -110,6 +159,7 @@ class LCTaskPanel:
     def action(self):
         pass
         
+        
 class LasercutterTechdrawExport():
     '''This class will be loaded when the workbench is activated in FreeCAD. You must restart FreeCAD to FreeCADly changes in this class'''  
       
@@ -123,13 +173,13 @@ class LasercutterTechdrawExport():
         for sel in selection:
             FreeCADGui.doCommand("parts.append(FreeCAD.ActiveDocument.getObject('%s'))"%(sel.ObjectName))
             
-        FreeCADGui.doCommand("LasercutterTechdrawExport.makeLasercutterTechdrawExport(parts)")
+        FreeCADGui.doCommand("LasercutterTechdrawExport.makeLasercutterTechdrawExport(parts, BeamWidth = 0.2, doc = App.activeDocument())")
                   
 
     def IsActive(self):
         """Here you can define if the command must be active or not (greyed) if certain conditions
         are met or not. This function is optional."""
-        if FreeCAD.ActiveDocument:
+        if app.activeDocument():
             return(True)
         else:
             return(False)
@@ -144,124 +194,58 @@ class LasercutterTechdrawExport():
 FreeCADGui.addCommand('LasercutterTechdrawExport', LasercutterTechdrawExport())
 
 
-
-# creates contourlines for all selected objects to a TechDraw page
-def make_offset_parts(doc, cutterDiameter):
-    selection = FreeCADGui.Selection.getSelection()
-    if not selection:
-        print("nothing selected !")
-        return
-
-    if not selection[0].Shape:
-        print("selected part has no shape !")
-        return
-
-    offsets = []
-    for sel in selection:
-        # create a contour line object for every selected object
-        offset = doc.addObject("Part::Offset", sel.Label + "_offset")
-        offset.Source = Draft.clone(sel)
-        offset.Value = cutterDiameter / 2
-        offset.Mode = 0
-        offset.Join = 2
-        offset.Intersection = False
-        offset.SelfIntersection = False
-        offset.ViewObject.Visibility=False
-        doc.recompute()
-
-        # rotate biggest face into xy-plane
-        face = get_biggest_face(offset)
-        if face is not None:
-            rotate_face_up(offset, face)
-            rotate_biggest_side_up(offset, face)
-
-        offsets.append(offset)
-     
-    return offsets
-
-
-def selected_to_techdraw(offsets, techdraw, BeamWidth):
-    doc = FreeCAD.ActiveDocument
+def selected_to_techdraw(doc, offsets, techdraw, BeamWidth):
     x = BeamWidth
     y = 0
     
     for offset in offsets:
         bbox = offset.Shape.BoundBox
+        bsize = Vector(bbox.XLength, bbox.YLength, bbox.ZLength)
+        
         # add a 2D view to the TechDraw page right of the last part
-        maxheight = y + bbox.YLength + BeamWidth
+        maxheight = y + bsize.y + BeamWidth
         if maxheight > techdraw.Template.Height:
             techdraw.Template.Height = maxheight
 
-        maxwidth = x + bbox.XLength + BeamWidth
+        maxwidth = x + bsize.x + BeamWidth
         if maxwidth > techdraw.Template.Width:
             techdraw.Template.Width = maxwidth
 
         viewname = offset.Label.replace("offset", "contour")
-        view = doc.getObject(viewname)
-        if not view:
+        views = doc.getObjectsByLabel(viewname)
+        if len(views) > 0:
+            view = views[0]
+        else:
             view = doc.addObject('TechDraw::DrawViewPart', viewname)
             techdraw.addView(view)
             
-        view.CoarseView = True
+        view.CoarseView = False
         view.ViewObject.LineWidth = BeamWidth
         view.Source = offset
         view.Direction = Vector(0, 0, 1)
         view.ScaleType = u"Custom"
         view.Scale = 1.00
-        view.X = x + bbox.XLength / 2
-        view.Y = y + bbox.YLength - (bbox.YLength / 2)
-        x = x + bbox.XLength + BeamWidth
-        
+        view.X = x + bsize.x / 2
+        view.Y = y + bsize.y - (bsize.y / 2)
+        x = x + bsize.x + BeamWidth
+              
 
-def get_biggest_face(part):
-    max_area = 0
-    max_face = None
-    for face in part.Shape.Faces:
-        if face.Area > max_area:
-            max_area = face.Area
-            max_face = face
-
-    return max_face
-
-
-# rotate face into xy-plane
-def rotate_face_up(part_feature, face):
-    normal_ref = face.normalAt(0, 0)
-    rotation_to_FreeCADly = FreeCAD.Rotation(normal_ref, Vector(0, 0, 1))
-    new_rotation = rotation_to_FreeCADly.multiply(part_feature.Placement.Rotation)
-    part_feature.Placement.Rotation = new_rotation
-
-
-def rotate_biggest_side_up(part_feature, face):
-    bbox = part_feature.Shape.BoundBox
-    xmin = bbox.XLength
-    anglemax = 0.0
-    angle = 0.0
-    while angle < 180:
-        Draft.rotate([part_feature], 22.5, Vector(bbox.XMin, bbox.YMin, bbox.ZMin), axis=Vector(0.0,0.0,1.0), copy=False)
-        angle = angle + 22.5
-
-        if xmin > part_feature.Shape.BoundBox.XLength:
-            xmin = part_feature.Shape.BoundBox.XLength
-            anglemax = angle
-
-    Draft.rotate([part_feature], 180 + anglemax, Vector(0.0,0.0,0.0), axis=Vector(0.0,0.0,1.0), copy=False)
-
-
-def makeLasercutterTechdrawExport(parts, BeamWidth = 0.2):   
-    doc = FreeCAD.ActiveDocument
+def makeLasercutterTechdrawExport(parts, BeamWidth = 0.2, doc = app.activeDocument()):   
     techdraw = doc.addObject('TechDraw::DrawPage','LasercutterTechdraw')
     template = doc.addObject('TechDraw::DrawSVGTemplate','Template')
     techdraw.Template = template
     
-    offset_parts = []
-    if len(parts) > 0:       
-        offset_parts = make_offset_parts(doc, BeamWidth)
-        selected_to_techdraw(offset_parts, techdraw, BeamWidth)
+    contours = []
+    for p in parts:  
+        ifp = doc.addObject("Part::FeaturePython", "LasercutterTechdrawExport")
+        LasercutterTechdrawExportItem(ifp, p, BeamWidth)
+        LasercutterTechdrawExportItemViewProvider(ifp.ViewObject)  
+        contours.append(ifp)   
     
-    fp = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "LasercutterTechdrawExport")
-    LasercutterTechdrawExportWorker(fp, techdraw, offset_parts, BeamWidth)
-    LasercutterTechdrawExportViewProvider(fp.ViewObject)
-    FreeCAD.ActiveDocument.recompute()
+    LaserCutterExportObjects = doc.addObject('App::DocumentObjectGroup', 'LaserCutterExportObjects')
+    LaserCutterExportObjects.Group = contours
+    LaserCutterExportObjects.ViewObject.hide()
+    doc.recompute()
+    selected_to_techdraw(doc, contours, techdraw, BeamWidth)
+    doc.recompute()
     techdraw.ViewObject.show()
-    return fp
