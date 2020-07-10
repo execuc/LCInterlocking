@@ -11,9 +11,13 @@ import FreeCAD as app
 from FreeCAD import Vector, Rotation
 import Part
 import Draft
+import math
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, '../icons')
+
+global epsilon
+epsilon = 1e-7
         
 class LasercutterTechdrawExportItem:
     def __init__(self, 
@@ -26,9 +30,6 @@ class LasercutterTechdrawExportItem:
         fp.addProperty("App::PropertyVector", "Normal",  "LasercutterTechdrawExport",  "What the heck is normal ?").Normal = Normal
         fp.addProperty("App::PropertyFloat", "BeamWidth", "LasercutterTechdrawExport",  "Laser beam width in mm").BeamWidth = BeamWidth
         fp.Proxy = self
-#        if len(Parts) == 0:
-#            panel = LCTaskPanel(fp)
-#            FreeCADGui.Control.showDialog(panel)
     
     def execute(self, fp):
         '''Do something when doing a recomputation, this method is mandatory'''
@@ -48,20 +49,33 @@ class LasercutterTechdrawExportItem:
             if fp.Normal == Vector(0, 0, 1):
                 fp.Normal = face.normalAt(0, 0)
         else:
-            print("no face")
-            outline = part.makeOffset(fp.BeamWidth / 2)       
+            try:
+                outline = fp.Part.Shape.makeOffset2D(fp.BeamWidth / 2) 
+            except:
+                outline = fp.Part.Shape.makeOffsetShape(fp.BeamWidth / 2)   
+                
+            fp.Normal = self.getNormal(fp.Part)   
             
         fp.Shape = Part.Compound(outline.Wires);
         fp.Label = fp.Part.Label + " offset"
+        fp.Placement = outline.Placement
         
-        rotation_to_apply = Rotation(fp.Normal, Vector(0, 0, 1))
+        if fp.Placement.Rotation.Axis.z < 0:
+            fp.Placement.Rotation.Axis = fp.Placement.Rotation.Axis * -1
+            
+        if fp.Normal.z < 0:
+            fp.Normal = fp.Normal * -1
+            
+        rotation_to_apply = Rotation(fp.Normal, Vector(0, 0, 1))    
         new_rotation = rotation_to_apply.multiply(fp.Placement.Rotation)
         fp.Placement.Rotation = new_rotation
+         
         self.rotate_biggest_side_up(fp)
         self.updating = False
         
     def get_biggest_face(self, part):
         max_area = 0
+        max_face = None
         for face in part.Shape.Faces:
             if face and face.Area > max_area:
                 max_area = face.Area
@@ -71,22 +85,39 @@ class LasercutterTechdrawExportItem:
             return max_face
         
     def rotate_biggest_side_up(self, fp):
-        bbox = fp.Shape.BoundBox
+        bbox = fp.Shape.optimalBoundingBox()
         xmin = bbox.XLength
         angle = 0.0
         r = fp.Placement.Rotation
-        while angle < 180:     
-            angle = angle + 22.5       
-            rotation_to_apply = Rotation(22.5, 0.0, 0.0)
-            new_rotation = rotation_to_apply.multiply(fp.Placement.Rotation)
-            fp.Placement.Rotation = new_rotation
+        r_best = r
+        step = 180 / 16
+        a = 0
+        while angle + step < 180:   
+            angle = angle + step 
+            rotation_to_apply = Rotation()
+            rotation_to_apply.Axis = Vector(0, 0, 1)             
+            rotation_to_apply.Angle = math.radians(angle)              
+            fp.Placement.Rotation = rotation_to_apply.multiply(r)
+            bbox = fp.Shape.optimalBoundingBox()
     
-            if xmin > fp.Shape.BoundBox.XLength:
-                xmin = fp.Shape.BoundBox.XLength
-                r = fp.Placement.Rotation
+            if xmin > bbox.XLength:
+                xmin = bbox.XLength
+                r_best = fp.Placement.Rotation
+                a = angle
+                 
     
-        fp.Placement.Rotation = r
+        print(fp.Label + " " + str(r) + " angle: " + str(a))
+        fp.Placement.Rotation = r_best
         
+    def getNormal(self, obj):
+        if hasattr(obj, 'Dir'):
+            return obj.Dir
+        else:
+            bbox = obj.Shape.BoundBox
+            if bbox.XLength < epsilon: return Vector(1.0,0.0,0.0)
+            elif bbox.YLength < epsilon: return Vector(0.0,1.0,0.0)
+            elif bbox.ZLength < epsilon: return Vector(0.0,0.0,1.0)
+            return obj.Placement.Rotation.multVec(Vector(0, 0, 1))
         
 class LasercutterTechdrawExportItemViewProvider:
     def __init__(self, vobj):
@@ -219,29 +250,34 @@ def selected_to_techdraw(doc, offsets, techdraw, BeamWidth):
             view = doc.addObject('TechDraw::DrawViewPart', viewname)
             techdraw.addView(view)
             
-        view.CoarseView = False
-        view.ViewObject.LineWidth = BeamWidth
-        view.Source = offset
-        view.Direction = Vector(0, 0, 1)
-        view.ScaleType = u"Custom"
-        view.Scale = 1.00
-        view.X = x + bsize.x / 2
-        view.Y = y + bsize.y - (bsize.y / 2)
-        x = x + bsize.x + BeamWidth
-              
+        try:
+            view.CoarseView = False
+            view.ViewObject.LineWidth = BeamWidth
+            view.Source = offset
+            view.Direction = Vector(0, 0, 1)
+            view.ScaleType = u"Custom"
+            view.Scale = 1.00
+            view.X = x + bsize.x / 2
+            view.Y = y + bsize.y - (bsize.y / 2)
+            x = x + bsize.x + BeamWidth
+        except:
+            app.Console.PrintError("view for " + viewname + " cannot be created !")
+                  
 
-def makeLasercutterTechdrawExport(parts, BeamWidth = 0.2, doc = app.activeDocument()):   
-    techdraw = doc.addObject('TechDraw::DrawPage','LasercutterTechdraw')
-    template = doc.addObject('TechDraw::DrawSVGTemplate','Template')
-    techdraw.Template = template
-    
+def makeLasercutterTechdrawExport(parts, BeamWidth = 0.2, doc = app.activeDocument()):       
     contours = []
     for p in parts:  
         ifp = doc.addObject("Part::FeaturePython", "LasercutterTechdrawExport")
         LasercutterTechdrawExportItem(ifp, p, BeamWidth)
         LasercutterTechdrawExportItemViewProvider(ifp.ViewObject)  
-        contours.append(ifp)   
-    
+        contours.append(ifp)  
+        doc.recompute()
+        
+    if len(contours) == 0: return 
+        
+    techdraw = doc.addObject('TechDraw::DrawPage','LasercutterTechdraw')
+    template = doc.addObject('TechDraw::DrawSVGTemplate','Template')
+    techdraw.Template = template
     LaserCutterExportObjects = doc.addObject('App::DocumentObjectGroup', 'LaserCutterExportObjects')
     LaserCutterExportObjects.Group = contours
     LaserCutterExportObjects.ViewObject.hide()
@@ -249,3 +285,4 @@ def makeLasercutterTechdrawExport(parts, BeamWidth = 0.2, doc = app.activeDocume
     selected_to_techdraw(doc, contours, techdraw, BeamWidth)
     doc.recompute()
     techdraw.ViewObject.show()
+    return techdraw
