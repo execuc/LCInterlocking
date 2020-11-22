@@ -24,11 +24,14 @@ class LasercutterTechdrawExportItem:
                  fp,    # an instance of Part::FeaturePython
                  Part = None,
                  BeamWidth = 0.2,
-                 Normal = Vector(0, 0, 1)):
+                 Normal = Vector(0, 0, 1),
+                 method = 'auto'):
         self.updating = False
         fp.addProperty("App::PropertyLink", "Part",  "LasercutterTechdrawExport",  "Selected part").Part = Part
         fp.addProperty("App::PropertyVector", "Normal",  "LasercutterTechdrawExport",  "What the heck is normal ?").Normal = Normal
         fp.addProperty("App::PropertyFloat", "BeamWidth", "LasercutterTechdrawExport",  "Laser beam width in mm").BeamWidth = BeamWidth
+        fp.addProperty("App::PropertyEnumeration", "Method", "LasercutterTechdrawExport",  "How to create the outline").Method = ['auto', '2D', '3D', 'face']
+        fp.Method = method
         fp.Proxy = self
     
     def execute(self, fp):
@@ -43,18 +46,26 @@ class LasercutterTechdrawExportItem:
             
     def make_outline(self, fp): 
         self.updating = True 
-        face = self.get_biggest_face(fp.Part)
-        if face:
-            outline = face.makeOffset2D(fp.BeamWidth / 2)
-            if fp.Normal == Vector(0, 0, 1):
-                fp.Normal = face.normalAt(0, 0)
+        
+        if fp.Method == '2D':
+            outline = fp.Part.Shape.makeOffset2D(fp.BeamWidth / 2) 
+            fp.Normal = self.getNormal(fp.Part) 
+        elif fp.Method == '3D':
+            outline = fp.Part.Shape.makeOffsetShape(fp.BeamWidth / 2, 1e-7)
+            fp.Normal = self.getNormal(fp.Part) 
         else:
-            try:
-                outline = fp.Part.Shape.makeOffset2D(fp.BeamWidth / 2) 
-            except:
-                outline = fp.Part.Shape.makeOffsetShape(fp.BeamWidth / 2)   
-                
-            fp.Normal = self.getNormal(fp.Part)   
+            face = self.get_biggest_face(fp.Part)
+            if face:
+                outline = face.makeOffset2D(fp.BeamWidth / 2)
+                if fp.Normal == Vector(0, 0, 1):
+                    fp.Normal = face.normalAt(0, 0)
+            elif fp.Method == 'auto':
+                try:
+                    outline = fp.Part.Shape.makeOffset2D(fp.BeamWidth / 2) 
+                except:
+                    outline = fp.Part.Shape.makeOffsetShape(fp.BeamWidth / 2, 1e-7)   
+                    
+                fp.Normal = self.getNormal(fp.Part)   
             
         fp.Shape = Part.Compound(outline.Wires);
         fp.Label = fp.Part.Label + " offset"
@@ -91,7 +102,6 @@ class LasercutterTechdrawExportItem:
         r = fp.Placement.Rotation
         r_best = r
         step = 180 / 16
-        a = 0
         while angle + step < 180:   
             angle = angle + step 
             rotation_to_apply = Rotation()
@@ -103,10 +113,7 @@ class LasercutterTechdrawExportItem:
             if xmin > bbox.XLength:
                 xmin = bbox.XLength
                 r_best = fp.Placement.Rotation
-                a = angle
                  
-    
-        print(fp.Label + " " + str(r) + " angle: " + str(a))
         fp.Placement.Rotation = r_best
         
     def getNormal(self, obj):
@@ -264,11 +271,11 @@ def selected_to_techdraw(doc, offsets, techdraw, BeamWidth):
             app.Console.PrintError("view for " + viewname + " cannot be created !")
                   
 
-def makeLasercutterTechdrawExport(parts, BeamWidth = 0.2, doc = app.activeDocument()):       
+def makeLasercutterTechdrawExport(parts, BeamWidth = 0.2, doc = app.activeDocument(), method = 'auto'):       
     contours = []
     for p in parts:  
         ifp = doc.addObject("Part::FeaturePython", "LasercutterTechdrawExport")
-        LasercutterTechdrawExportItem(ifp, p, BeamWidth)
+        LasercutterTechdrawExportItem(ifp, p, BeamWidth, method=method)
         LasercutterTechdrawExportItemViewProvider(ifp.ViewObject)  
         contours.append(ifp)  
         doc.recompute()
