@@ -1,4 +1,4 @@
-# ![alt text](../icons/LasercutterTechdrawExport.svg) FreeCAD Lasercutter SVG Export Macro
+# ![alt text](../icons/LasercutterTechdrawExport.svg) Lasercutter Techdraw Export
 
 This tool is derived from the macro [LasercutterSVGExport](https://forum.freecadweb.org/viewtopic.php?f=35&t=31869)  
 
