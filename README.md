@@ -22,6 +22,7 @@ This panel appears when "Laser cut Interlocking" module is selected:
  * ![Illustration](docs/imgs/roundedboxgenerator.png) [Generate rounded box without connection.](docs/rounded_box_generator.md)
  * ![Illustration](docs/imgs/living_hinges.png) [Create bend surface with living hinges.](docs/living_hinges.md)
  * ![Illustration](docs/imgs/export.png) [Project parts to 2D plan in order to export in SVG format.](docs/export.md) (Export tool)
+ * ![Illustration](icons/LasercutterTechdrawExport.svg) [Project parts in 2D to a Techdraw view in order to export in SVG format.](LasercutterTechdrawExport/Readme.md) (Export tool)
 
 ## Installation
 
@@ -62,8 +63,11 @@ If you encounter a bug please participate in the [dedicated FreeCAD discussion t
  * Rounded box tool:  https://www.youtube.com/watch?v=lEOgZ6k9Vxw
  * Crosspiece: https://www.youtube.com/watch?v=tIchogx5BLE
  * Rounded corner: https://www.youtube.com/watch?v=KSnMxqjA_-Q
- 
+
 ## Changelog
+**v2.0:**
+ * Added LastercutterTechdrawExport tool
+ 
 **v1.4: In progress**
  * Fix for FreeCAD 0.19.
 
