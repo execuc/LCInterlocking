@@ -147,16 +147,27 @@ def tab_join_create_tab_on_face(material_face, material_plane, width, pos_y, tab
             radius = tab_face.dog_bone_diameter / 2.0
         FreeCAD.Console.PrintError("Radius tab_join_create_tab_on_face: %f\n" % radius)
 
-        shift = radius / 2.
+        base_shift = radius / 2.0
+
+        shift_x = base_shift
+        if hasattr(tab_face, 'dog_bone_shift_x'):
+            shift_x += tab_face.dog_bone_shift_x
+        shift_y = base_shift
+        if hasattr(tab_face, 'dog_bone_shift_y'):
+            shift_y += tab_face.dog_bone_shift_y
 
         if y_minus_inside:
             left_hole = Part.makeCylinder(radius, corrected_height,
-                                          FreeCAD.Vector(shift, -corrected_width_center + pos_y - shift,
+                                          FreeCAD.Vector(
+                                              shift_x,
+                                              -corrected_width_center + pos_y - shift_y,
                                               -corrected_height / 2.0),
                                           FreeCAD.Vector(0, 0, 1.))
         if y_plus_inside:
             right_hole = Part.makeCylinder(radius, corrected_height,
-                                           FreeCAD.Vector(shift, -corrected_width_center + pos_y + corrected_width + shift,
+                                           FreeCAD.Vector(
+                                               shift_x,
+                                               -corrected_width_center + pos_y + corrected_width + shift_y,
                                               -corrected_height / 2.0),
                                            FreeCAD.Vector(0, 0, 1.))
         hole = left_hole

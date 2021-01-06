@@ -448,15 +448,23 @@ def make_dog_bone_on_limits_on_yz(tab_face, shape, length,
 
     FreeCAD.Console.PrintError("Radius make_dog_bone_on_limits_on_yz: %f\n" % radius)
 
-    shift = radius / 2.0
+    base_shift = radius / 2.0
+
+    shift_x = base_shift
+    if hasattr(tab_face, 'dog_bone_shift_x'):
+        shift_x += tab_face.dog_bone_shift_x
+    shift_y = base_shift
+    if hasattr(tab_face, 'dog_bone_shift_y'):
+        shift_y += tab_face.dog_bone_shift_y
+
     if y_min_z_min:
-        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMin + shift, bound_box.ZMin + shift, length, radius))
+        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMin + shift_y, bound_box.ZMin + shift_x, length, radius))
     if y_max_z_min:
-        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMax - shift, bound_box.ZMin + shift, length, radius))
+        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMax - shift_y, bound_box.ZMin + shift_x, length, radius))
     if y_min_z_max:
-        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMin + shift, bound_box.ZMax - shift, length, radius))
+        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMin + shift_y, bound_box.ZMax - shift_x, length, radius))
     if y_max_z_max:
-        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMax - shift, bound_box.ZMax - shift, length, radius))
+        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMax - shift_y, bound_box.ZMax - shift_x, length, radius))
     return shape
 
 
