@@ -36,7 +36,9 @@ class TabProperties(helper.ObjectProperties):
     TYPE_NOT_DEFINED = 'Not Defined'
 
     _allowed = ('face_name', 'y_length', 'thickness', 'tabs_width', 'tabs_number', 'tabs_shift',
-                'dog_bone', 'tab_dog_bone', 'screw_diameter', 'screw_length', 'screw_length_tol', 'makeScrew',
+                'dog_bone', 'tab_dog_bone',
+                'dog_bone_diameter_auto', 'dog_bone_diameter', 'dog_bone_shift_x', 'dog_bone_shift_y',
+                'screw_diameter', 'screw_length', 'screw_length_tol', 'makeScrew',
                 'y_invert', 'half_tab_ratio', 'interval_ratio', 'freecad_obj_name',
                 'tab_type', 'group_id', 'description', 'link_name', 'tab_name', 'transform_matrix')
 
@@ -52,6 +54,7 @@ class TabProperties(helper.ObjectProperties):
         self.freecad_object = None
         self.freecad_face = None
         self.transform_matrix = None
+        self.group_id = self._count()
         if not kwargs['freecad_face']:
             raise ValueError("Must init with freecad face")
         if not hasattr(self, 'freecad_obj_name') :#or not hasattr(self, 'freecad_face'):
@@ -72,6 +75,9 @@ class TabProperties(helper.ObjectProperties):
                 self.y_length = y_length.Length
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
+        self.__init_defaults__()
+
+    def __init_defaults__(self):
         if not hasattr(self, 'tabs_number'):
             self.tabs_number = 1
         if not hasattr(self, 'tabs_width'):
@@ -92,9 +98,16 @@ class TabProperties(helper.ObjectProperties):
             self.dog_bone = True
         if not hasattr(self, 'tab_dog_bone'):
             self.tab_dog_bone = False
+        if not hasattr(self, 'dog_bone_diameter_auto'):
+            self.dog_bone_diameter_auto = True
+        if not hasattr(self, 'dog_bone_diameter'):
+            self.dog_bone_diameter = 1.
+        if not hasattr(self, 'dog_bone_shift_x'):
+            self.dog_bone_shift_x = 0.
+        if not hasattr(self, 'dog_bone_shift_y'):
+            self.dog_bone_shift_y = 0.
         if not hasattr(self, 'y_invert'):
             self.y_invert = False
-        self.group_id = self._count()
         if not hasattr(self, 'link_name'):
             self.link_name = ""
 

@@ -275,6 +275,7 @@ def remove_intersections(first_part, second_part, referential_faces, axis, inver
     first_box = make_nodes_xz(first_box, first_box_x, first_part.properties.thickness, height,
                               first_part.properties.node_type, first_part.properties.node_thickness)
     dog_bone_radius = min(first_box_x, height) * 2. / 30.
+    FreeCAD.Console.PrintError("Radius remove_intersections: %f\n" % dog_bone_radius)
 
     if invert_y:
         if first_part.properties.dog_bone:
@@ -293,6 +294,7 @@ def remove_intersections(first_part, second_part, referential_faces, axis, inver
                                second_part.properties.node_type, second_part.properties.node_thickness)
 
     dog_bone_radius = min(second_box_y, height) * 2. / 30.
+    FreeCAD.Console.PrintError("Radius remove_intersections: %f\n" % dog_bone_radius)
 
     if not invert_y:
         if second_part.properties.dog_bone:
