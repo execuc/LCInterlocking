@@ -108,7 +108,7 @@ def screw_way_on_face(material_face, material_plane, screw_nut_spec, pos_y, dog_
 # X est vers le haut
 # Y est aligné sur la face
 # Z est devant la camera
-def tab_join_create_tab_on_face(material_face, material_plane, width, pos_y, tab_face, dog_bone=False):
+def tab_join_create_tab_on_face(material_face, material_plane, width, pos_y, tab_face):
 
     y_plus_inside, y_minus_inside = helper.check_limit_y_on_for_tab(tab_face, material_face.thickness, pos_y, width,
                                                                     material_plane.thickness, material_face)
@@ -140,16 +140,35 @@ def tab_join_create_tab_on_face(material_face, material_plane, width, pos_y, tab
     left_hole = None
     right_hole = None
 
-    if dog_bone:
-        radius = min(corrected_width, corrected_length) * 2 / 30.
+    if tab_face.dog_bone:
+        if not hasattr(tab_face, 'dog_bone_diameter_auto') or tab_face.dog_bone_diameter_auto:
+            radius = min(corrected_width, corrected_length) * 2 / 30.
+        else:
+            radius = tab_face.dog_bone_diameter / 2.0
+        FreeCAD.Console.PrintError("Radius tab_join_create_tab_on_face: %f\n" % radius)
+
+        base_shift = radius / 2.0
+
+        shift_x = base_shift
+        if hasattr(tab_face, 'dog_bone_shift_x'):
+            shift_x += tab_face.dog_bone_shift_x
+        shift_y = base_shift
+        if hasattr(tab_face, 'dog_bone_shift_y'):
+            shift_y += tab_face.dog_bone_shift_y
+
         if y_minus_inside:
             left_hole = Part.makeCylinder(radius, corrected_height,
-                                          FreeCAD.Vector(0, -corrected_width_center + pos_y, -corrected_height / 2.0),
+                                          FreeCAD.Vector(
+                                              shift_x,
+                                              -corrected_width_center + pos_y - shift_y,
+                                              -corrected_height / 2.0),
                                           FreeCAD.Vector(0, 0, 1.))
         if y_plus_inside:
             right_hole = Part.makeCylinder(radius, corrected_height,
-                                           FreeCAD.Vector(0, -corrected_width_center + corrected_width + pos_y,
-                                           -corrected_height / 2.0),
+                                           FreeCAD.Vector(
+                                               shift_x,
+                                               -corrected_width_center + pos_y + corrected_width + shift_y,
+                                              -corrected_height / 2.0),
                                            FreeCAD.Vector(0, 0, 1.))
         hole = left_hole
         if hole and right_hole:
@@ -165,7 +184,7 @@ def make_tab_join(tab, tab_part, other_parts):
     for i, y in enumerate(slots_pos):
         for part_interactor in other_parts:
             tab_to_add, tab_dog_bone = tab_join_create_tab_on_face(tab_part.properties, part_interactor.properties,
-                                                                   tab.tabs_width, y, tab, tab.tab_dog_bone)
+                                                                   tab.tabs_width, y, tab)
             intersect_test, tab_to_add_transformed = helper.check_intersect(tab_to_add, tab,
                                                                             part_interactor.properties)
 
@@ -174,7 +193,7 @@ def make_tab_join(tab, tab_part, other_parts):
                 if tab_dog_bone:
                     tab_part.toRemove.append(helper.transform_part(tab_dog_bone, tab))
                 hole = helper.tab_join_create_hole_on_plane(tab, tab.tabs_width, y, tab_part.properties,
-                                                            part_interactor.properties, tab.dog_bone)
+                                                            part_interactor.properties)
                 part_interactor.toRemove.append(helper.transform_part(hole, tab))
                 break
     return
@@ -193,8 +212,7 @@ def make_continuous_tab_joins(tab, tab_part, other_parts):
         if tab_id % 2 == 0:
             for part_interactor in other_parts:
                 tab_to_add, tab_dog_bone = tab_join_create_tab_on_face(tab_part.properties, part_interactor.properties,
-                                                                       virtual_tab_length, y_pos_center, tab,
-                                                                       tab.tab_dog_bone)
+                                                                       virtual_tab_length, y_pos_center, tab)
                 intersect_test, tab_to_add_transformed = helper.check_intersect(tab_to_add, tab,
                                                                                 part_interactor.properties)
                 if intersect_test:
@@ -202,8 +220,7 @@ def make_continuous_tab_joins(tab, tab_part, other_parts):
                     if tab_dog_bone:
                         tab_part.toRemove.append(helper.transform_part(tab_dog_bone, tab))
                     hole = helper.tab_join_create_hole_on_plane(tab, virtual_tab_length, y_pos_center,
-                                                                tab_part.properties, part_interactor.properties,
-                                                                tab.dog_bone)
+                                                                tab_part.properties, part_interactor.properties)
                     part_interactor.toRemove.append(helper.transform_part(hole, tab))
                     break
         y_pos += virtual_tab_length
@@ -219,12 +236,10 @@ def make_tslot_tab_join(tab, tab_part, other_parts):
         for part_interactor in other_parts:
             left_tab_to_add, left_tab_dog_bone = tab_join_create_tab_on_face(tab_part.properties,
                                                                              part_interactor.properties,
-                                                                             tab.tabs_width, y - half_tab_distance,
-                                                                             tab, tab.tab_dog_bone)
+                                                                             tab.tabs_width, y - half_tab_distance, tab)
             right_tab_to_add, right_tab_dog_bone = tab_join_create_tab_on_face(tab_part.properties,
                                                                                part_interactor.properties,
-                                                                               tab.tabs_width, y + half_tab_distance,
-                                                                               tab, tab.tab_dog_bone)
+                                                                               tab.tabs_width, y + half_tab_distance, tab)
 
             right_intersect_test, right_tab_to_add_transformed = helper.check_intersect(right_tab_to_add, tab,
                                                                                  part_interactor.properties)
@@ -240,11 +255,9 @@ def make_tslot_tab_join(tab, tab_part, other_parts):
                     tab_part.toRemove.append(helper.transform_part(right_tab_dog_bone, tab))
 
                 left_hole = helper.tab_join_create_hole_on_plane(tab, tab.tabs_width, y - half_tab_distance,
-                                                                 tab_part.properties, part_interactor.properties,
-                                                                 tab.dog_bone)
+                                                                 tab_part.properties, part_interactor.properties)
                 right_hole = helper.tab_join_create_hole_on_plane(tab, tab.tabs_width, y + half_tab_distance,
-                                                                  tab_part.properties, part_interactor.properties,
-                                                                  tab.dog_bone)
+                                                                  tab_part.properties, part_interactor.properties)
 
                 part_interactor.toRemove.append(helper.transform_part(left_hole, tab))
                 part_interactor.toRemove.append(helper.transform_part(right_hole, tab))

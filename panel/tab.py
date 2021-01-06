@@ -50,8 +50,19 @@ class BaseTabWidget(ParamWidget):
                                 WidgetValue(type=float, name="interval_ratio", show_name="Interval ratio",
                                             widget=None, interval_value=[0.1, 5.], step=0.1, decimals=2),
                                 WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None),
-                                WidgetValue(type=bool, name="tab_dog_bone", show_name="Tab dog bone hole", widget=None)
-                                 ])
+                                WidgetValue(type=bool, name="tab_dog_bone", show_name="Tab dog bone hole", widget=None),
+                                WidgetValue(type=bool, name="dog_bone_diameter_auto",
+                                    show_name="Auto dog bone hole diameter", widget=None),
+                                WidgetValue(type=float, name="dog_bone_diameter",
+                                    show_name="Dog bone diameter (ignored if auto is set)", widget=None,
+                                    interval_value=[0., 300.], step=1., decimals=2),
+                                WidgetValue(type=float, name="dog_bone_shift_x",
+                                    show_name="Dog bone shift x", widget=None,
+                                    interval_value=[-300., 300.], step=1., decimals=2),
+                                WidgetValue(type=float, name="dog_bone_shift_y",
+                                    show_name="Dog bone shift y", widget=None,
+                                    interval_value=[-300., 300.], step=1., decimals=2),
+                                ])
 
     def get_tab_type(self):
         return self.object_property.tab_type
@@ -89,7 +100,19 @@ class TabContinuousWidget(BaseTabWidget):
                                             widget=None, interval_value=[2., 300.], step=1., decimals=0),
                             WidgetValue(type=bool, name="y_invert", show_name="Invert Y", widget=None),
                             WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None),
-                            WidgetValue(type=bool, name="tab_dog_bone", show_name="Tab dog bone hole", widget=None)]
+                            WidgetValue(type=bool, name="tab_dog_bone", show_name="Tab dog bone hole", widget=None),
+                            WidgetValue(type=bool, name="dog_bone_diameter_auto",
+                                show_name="Auto dog bone hole diameter", widget=None),
+                            WidgetValue(type=float, name="dog_bone_diameter",
+                                show_name="Dog bone diameter (ignored if auto is set)", widget=None,
+                                interval_value=[0., 300.], step=1., decimals=2),
+                            WidgetValue(type=float, name="dog_bone_shift_x",
+                                show_name="Dog bone shift x", widget=None,
+                                interval_value=[-300., 300.], step=1., decimals=2),
+                            WidgetValue(type=float, name="dog_bone_shift_y",
+                                show_name="Dog bone shift y", widget=None,
+                                interval_value=[-300., 300.], step=1., decimals=2),
+                            ]
 
 
 class TabFlexWidget(BaseTabWidget):
@@ -100,7 +123,7 @@ class TabFlexWidget(BaseTabWidget):
         self.widget_list = [WidgetValue(type=float, name="tabs_width", show_name="Width of tabs", widget=None,
                                             interval_value=[1., 300.], step=1., decimals=2),
                             WidgetValue(type=bool, name="y_invert", show_name="Invert Y", widget=None),
-                            WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None)]
+                            aidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None)]
 
 
 class TabLink(ParamWidget):
@@ -219,6 +242,7 @@ class TabsList(object):
             if self.faces[index].tab_name == name:
                 #FreeCAD.Console.PrintMessage("found " + name + "\n")
                 face = self.faces[index]
+                face.__init_defaults__()
                 if not face.link_name:
                     widget = self.createWidgetFromTabProperties(face)
                 else:

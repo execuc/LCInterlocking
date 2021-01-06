@@ -46,7 +46,7 @@ def make_round_tab(tab, tab_part, other_parts):
             tab_part.toAdd.append(tab_to_add_transformed)
             #print "tab " + str(tab.dog_bone)
             hole = helper.tab_join_create_hole_on_plane(tab, tab.tabs_width, y, tab_part.properties,
-                                                        part_interactor.properties, tab.dog_bone)
+                                                        part_interactor.properties)
             part_interactor.toRemove.append(helper.transform_part(hole, tab))
             break
 
@@ -64,7 +64,7 @@ def make_round_tab(tab, tab_part, other_parts):
                                     tab.tabs_width, y)
             tab_part.toRemove.append(helper.transform_part(groove, tab))
             hole = helper.tab_join_create_hole_on_plane(tab, tab.tabs_width, y, tab_part.properties,
-                                                        part_interactor.properties, tab.dog_bone)
+                                                        part_interactor.properties)
             part_interactor.toRemove.append(helper.transform_part(hole, tab))
             break
     return
