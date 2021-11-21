@@ -48,7 +48,7 @@ class BaseTabWidget(ParamWidget):
                                 WidgetValue(type=float, name="tabs_shift", show_name="Shift", widget=None,
                                             interval_value=[-300, 300.], step=1., decimals=2),
                                 WidgetValue(type=float, name="interval_ratio", show_name="Interval ratio",
-                                            widget=None, interval_value=[0.1, 5.], step=0.1, decimals=2),
+                                            widget=None, interval_value=[0.1, 5.], step=0.1, decimals=3),
                                 WidgetValue(type=bool, name="dog_bone", show_name="Dog bone hole", widget=None),
                                 WidgetValue(type=bool, name="tab_dog_bone", show_name="Tab dog bone hole", widget=None)
                                  ])
