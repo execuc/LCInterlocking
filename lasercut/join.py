@@ -37,8 +37,8 @@ def get_slot_positions(tab_properties):
     if tab_properties.tabs_number % 2 == 1:
         slots_list.append(0.0 + tab_properties.tabs_shift)
         for i in range(half_tab_number):
-            left = float(i+1) * interval_length * tab_properties.interval_ratio
-            right = float(-i-1) * interval_length * tab_properties.interval_ratio
+            left = float(i+1) * interval_length
+            right = float(-i-1) * interval_length
             if tab_properties.interval_ratio != 1.0:
                 left *= tab_properties.interval_ratio
                 right *= tab_properties.interval_ratio
