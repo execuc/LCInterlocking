@@ -166,9 +166,47 @@ def get_matrix_transform(face):
 
     return m
 
+def normaliseEdge(edge):
+    sizeX = edge.BoundBox.XMax - edge.BoundBox.XMin
+    sizeY = edge.BoundBox.YMax - edge.BoundBox.YMin
+    sizeZ = edge.BoundBox.ZMax - edge.BoundBox.ZMin
+    
+    return FreeCAD.Vector(sizeX / edge.Length, sizeY / edge.Length, sizeZ / edge.Length )
 
 def get_local_axis(face):
     list_edges = Part.__sortEdges__(face.Edges)
+    
+    coalescedEdges = []
+    previousEdge = None
+    previousEdgeGradient = None
+    for edge in list_edges:
+        edgeGradient = normaliseEdge(edge)
+
+        if previousEdge is not None:
+            # If this edge is the same direction as the previous edge, then we can merge the two edges together.
+            if edgeGradient == previousEdgeGradient:
+                ls = Part.LineSegment( coalescedEdges[-1].Vertexes[0].Point, FreeCAD.Vector(edge.Vertexes[1].X, edge.Vertexes[1].Y, edge.Vertexes[1].Z) )
+                coalescedEdges[-1] = Part.Edge(ls)
+            else:
+                coalescedEdges.append(edge)
+        else:
+            coalescedEdges.append(edge)
+
+        previousEdgeGradient = edgeGradient
+        previousEdge = edge
+
+    # And check in case the last edge is an extension of the first.
+    lastGradient = normaliseEdge(coalescedEdges[-1])
+    firstGradient = normaliseEdge(coalescedEdges[0])
+
+    if lastGradient == firstGradient:
+        ls = Part.LineSegment( coalescedEdges[-1].Vertexes[0].Point, FreeCAD.Vector(coalescedEdges[0].Vertexes[1].X, coalescedEdges[0].Vertexes[1].Y, coalescedEdges[0].Vertexes[1].Z) )
+        coalescedEdges[-1] = Part.Edge(ls)
+        
+        coalescedEdges.remove(coalescedEdges[0])
+
+    list_edges = coalescedEdges
+
     list_points = sort_quad_vertex(list_edges, False)
     if list_points is None:
         list_points = sort_quad_vertex(list_edges, True)
@@ -182,9 +220,9 @@ def get_local_axis(face):
     x_local = normal_face.normalize()
     z_local_not_normalized = None
     y_local_not_normalized = None
-    for x in range(0, 4):
-        vector1 = list_points[(x + 1) % 4] - list_points[x]
-        vector2 = list_points[(x - 1) % 4] - list_points[x]
+    for x in range(0, len(list_edges)):
+        vector1 = list_points[(x + 1) % len(list_edges)] - list_points[x]
+        vector2 = list_points[(x - 1) % len(list_edges)] - list_points[x]
         y_local = None
         z_local = None
         if vector1.Length >= vector2.Length:
@@ -210,7 +248,6 @@ def get_local_axis(face):
             return x_local, y_local_not_normalized, z_local_not_normalized
 
     return None, None, None
-
 
 def get_local_axis_normalized(face):
     x_local, y_local_not_normalized, z_local_not_normalized = get_local_axis(face)
