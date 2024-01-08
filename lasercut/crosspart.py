@@ -374,7 +374,7 @@ def make_cross_parts(parts):
                 remove_intersections(first_part, second_part, referential_faces, axis)
             elif first_face_first_shape and not second_face_first_shape \
                     and not first_face_second_shape and not second_face_second_shape:
-                # Cae where face 2 is common base and shape 1 is higher
+                # Case where face 2 is common base and shape 1 is higher
                 remove_intersections(first_part, second_part, referential_faces, axis, True)
             elif not first_face_first_shape and second_face_first_shape \
                     and not first_face_second_shape and not second_face_second_shape:
