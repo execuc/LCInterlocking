@@ -368,6 +368,22 @@ def make_cross_parts(parts):
                     and not first_face_second_shape and second_face_second_shape:
                 #print str_parts_name + " : a part is above the other (2)"
                 remove_intersections(first_part, second_part, referential_faces, axis, True)
+            elif not first_face_first_shape and not second_face_first_shape \
+                    and first_face_second_shape and not second_face_second_shape:
+                # Case where face 2 is common base and shape 2 is higher
+                remove_intersections(first_part, second_part, referential_faces, axis)
+            elif first_face_first_shape and not second_face_first_shape \
+                    and not first_face_second_shape and not second_face_second_shape:
+                # Case where face 2 is common base and shape 1 is higher
+                remove_intersections(first_part, second_part, referential_faces, axis, True)
+            elif not first_face_first_shape and second_face_first_shape \
+                    and not first_face_second_shape and not second_face_second_shape:
+                # Case where face 1 is common base and shape 1 is higher
+                remove_intersections(first_part, second_part, referential_faces, axis)
+            elif not first_face_first_shape and not second_face_first_shape \
+                    and not first_face_second_shape and second_face_second_shape:
+                # Case where face 1 is common and shape 2 is higher
+                remove_intersections(first_part, second_part, referential_faces, axis, True)
             else:
                 raise ValueError("Not managed")
 
