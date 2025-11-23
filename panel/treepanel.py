@@ -107,14 +107,16 @@ class TreePanel(object):
         raise ValueError("Must overloaded")
 
     def init_tree_widget(self):
-        v_box = QtGui.QVBoxLayout(self.tree_widget)
+        # Use child layouts without parenting them directly to the widget that already
+        # owns self.tree_vbox to avoid adding multiple layouts to the same QWidget.
+        v_box = QtGui.QVBoxLayout()
         preview_button = QtGui.QPushButton('Preview', self.tree_widget)
         preview_button.clicked.connect(self.abs_preview)
         self.fast_preview = QtGui.QCheckBox("Fast preview", self.tree_widget)
         line = QtGui.QFrame(self.tree_widget)
         line.setFrameShape(QtGui.QFrame.HLine);
         line.setFrameShadow(QtGui.QFrame.Sunken);
-        h_box = QtGui.QHBoxLayout(self.tree_widget)
+        h_box = QtGui.QHBoxLayout()
         h_box.addWidget(preview_button)
         h_box.addWidget(self.fast_preview)
         v_box.addLayout(h_box)
@@ -122,7 +124,7 @@ class TreePanel(object):
         self.tree_vbox.addLayout(v_box)
 
         # Add part buttons
-        h_box = QtGui.QHBoxLayout(self.tree_widget)
+        h_box = QtGui.QHBoxLayout()
         add_parts_button = QtGui.QPushButton('Add parts', self.tree_widget)
         add_parts_button.clicked.connect(self.add_parts)
         add_same_part_button = QtGui.QPushButton('Add same parts', self.tree_widget)
@@ -131,7 +133,7 @@ class TreePanel(object):
         h_box.addWidget(add_same_part_button)
         self.tree_vbox.addLayout(h_box)
         # Add faces buttons
-        h_box = QtGui.QHBoxLayout(self.tree_widget)
+        h_box = QtGui.QHBoxLayout()
         self.tab_type_box = QtGui.QComboBox(self.tree_widget)
         self.tab_type_box.addItems([TabProperties.TYPE_TAB, TabProperties.TYPE_T_SLOT,
                                     TabProperties.TYPE_CONTINUOUS])#, TabProperties.TYPE_FLEX])
@@ -155,7 +157,7 @@ class TreePanel(object):
         line.setFrameShadow(QtGui.QFrame.Sunken)
         self.tree_vbox.addWidget(line)
         # test layout
-        self.edit_items_layout = QtGui.QVBoxLayout(self.tree_widget)
+        self.edit_items_layout = QtGui.QVBoxLayout()
         self.tree_vbox.addLayout(self.edit_items_layout)
 
     def check_parts(self, parts):

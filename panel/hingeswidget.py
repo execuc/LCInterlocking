@@ -47,7 +47,7 @@ class GlobalLivingHingeWidget(ParamWidget):
                                              widget=None, interval_value=[0.1, 1.], decimals=4, step=0.05,
                                              parent_name="hinge_type",
                                              parent_value=[GlobalLivingMaterialProperties.HINGE_TYPE_ALTERNATE_DOUBLE]),
-                                 WidgetValue(type=float, name="link_clearance", show_name="Clearance width",
+                                 WidgetValue(type=float, name="link_clearance", show_name="Hinges width",
                                              widget=None, interval_value=[0., 30.], decimals=4, step=0.05),
                                  WidgetValue(type=float, name="laser_beam_diameter", show_name="Laser beam diameter",
                                              widget=None, interval_value=[0., 30.], decimals=4, step=0.05),

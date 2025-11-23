@@ -86,6 +86,10 @@ class ViewProviderGroupRoundedBox:
         if mode == 0:
             FreeCADGui.Control.showDialog(MakeRoundedBox(self.Object))
             return True
+    
+    def unsetEdit(self, vobj, mode=0):
+        FreeCADGui.Control.closeDialog()
+        return
 
     def setupContextMenu(self, obj, menu):
         action = menu.addAction("Edit")
@@ -163,6 +167,7 @@ class MakeRoundedBox:
 
     def accept(self):
         self.preview()
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def reject(self):
@@ -170,6 +175,7 @@ class MakeRoundedBox:
         self.obj_box.bottom_properties = self.bottom_properties_origin
         self.obj_box.top_properties = self.top_properties_origin
         self.obj_box.need_recompute = True
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def preview(self):
@@ -196,8 +202,8 @@ class MakeRoundedBoxCommand:
     def Activated(self):
         groupRoundedBox = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "RoundedBox")
         GroupRoundedBox(groupRoundedBox)
-        vp = ViewProviderGroupRoundedBox(groupRoundedBox.ViewObject)
-        vp.setEdit(ViewProviderGroupRoundedBox)
+        ViewProviderGroupRoundedBox(groupRoundedBox.ViewObject)
+        FreeCADGui.ActiveDocument.setEdit(groupRoundedBox.Name)
         return
 
 

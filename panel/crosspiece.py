@@ -169,6 +169,10 @@ class CrossPieceViewProvider:
         if mode == 0:
             FreeCADGui.Control.showDialog(CrossPiece(self.Object))
             return True
+    
+    def unsetEdit(self, vobj, mode=0):
+        FreeCADGui.Control.closeDialog()
+        return
 
     def setupContextMenu(self, obj, menu):
         action = menu.addAction("Edit")
@@ -210,11 +214,13 @@ class CrossPiece(TreePanel):
 
     def accept(self):
         self.compute(False)
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def reject(self):
         self.obj_join.parts = self.parts_origin
         self.obj_join.edit = False
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def compute(self, preview):
@@ -232,21 +238,21 @@ class CrossPiece(TreePanel):
 
     def init_tree_widget(self):
         #Preview button
-        v_box = QtGui.QVBoxLayout(self.tree_widget)
+        v_box = QtGui.QVBoxLayout()
         preview_button = QtGui.QPushButton('Preview', self.tree_widget)
         preview_button.clicked.connect(self.preview)
         #self.fast_preview = QtGui.QCheckBox("Fast preview", self.tree_widget)
         line = QtGui.QFrame(self.tree_widget)
         line.setFrameShape(QtGui.QFrame.HLine);
         line.setFrameShadow(QtGui.QFrame.Sunken);
-        h_box = QtGui.QHBoxLayout(self.tree_widget)
+        h_box = QtGui.QHBoxLayout()
         h_box.addWidget(preview_button)
         #h_box.addWidget(self.fast_preview)
         v_box.addLayout(h_box)
         v_box.addWidget(line)
         self.tree_vbox.addLayout(v_box)
         # Add part buttons
-        h_box = QtGui.QHBoxLayout(self.tree_widget)
+        h_box = QtGui.QHBoxLayout()
         add_parts_button = QtGui.QPushButton('Add parts', self.tree_widget)
         add_parts_button.clicked.connect(self.add_parts)
         add_same_part_button = QtGui.QPushButton('Add same parts', self.tree_widget)
@@ -262,7 +268,7 @@ class CrossPiece(TreePanel):
         remove_item_button.clicked.connect(self.remove_items)
         self.tree_vbox.addWidget(remove_item_button)
         # test layout
-        self.edit_items_layout = QtGui.QVBoxLayout(self.tree_widget)
+        self.edit_items_layout = QtGui.QVBoxLayout()
         self.tree_vbox.addLayout(self.edit_items_layout)
 
 class CrossPieceCommand:
@@ -281,8 +287,8 @@ class CrossPieceCommand:
     def Activated(self):
         groupCross = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "CrossPiece")
         CrossPieceGroup(groupCross)
-        vp = CrossPieceViewProvider(groupCross.ViewObject)
-        vp.setEdit(CrossPieceViewProvider)
+        CrossPieceViewProvider(groupCross.ViewObject)
+        FreeCADGui.ActiveDocument.setEdit(groupCross.Name)
         return
 
 Gui.addCommand('crosspiece', CrossPieceCommand())
