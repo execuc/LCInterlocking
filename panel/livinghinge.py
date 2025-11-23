@@ -135,11 +135,14 @@ class LivingHingesPanel:
 
     def add_connection(self, reversed_angle=False):
         faces_list = selection.get_freecad_faces_objects_list()
+        # FreeCAD.Console.PrintMessage("faces_list : %s\n" % faces_list)
         if len(faces_list) == 0 or len(faces_list) % 2 == 1:
             raise ValueError("Please select at least two faces (multiple of two)")
 
         for index in range(0, len(faces_list)-1, 2):
             current_last_object = self.get_last_object()
+            # FreeCAD.Console.PrintMessage("Current last object: %s\n" % current_last_object)
+            
             if faces_list[index]["freecad_object"].Name == current_last_object:
                 face_1 = faces_list[index]
                 face_2 = faces_list[index+1]
@@ -161,7 +164,7 @@ class LivingHingesPanel:
             widget = LivingHingeWidget(hinge)
             self.hinges.append(hinge)
             self.connection_widget_list.append(widget)
-        return True
+
         self.draw_connections()
         return True
 
