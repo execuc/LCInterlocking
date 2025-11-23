@@ -214,15 +214,15 @@ def create_linked_part(hinges_list, material_properties):
         raise ValueError("No hinge defined")
 
     if material_properties.laser_beam_diameter > material_properties.link_clearance:
-        raise ValueError("Laser beam diameter is greater than clearance width")
+        raise ValueError("Laser beam diameter is greater than hinge width (link clearance)")
     elif material_properties.link_clearance < 2. * material_properties.laser_beam_diameter:
         FreeCAD.Console.PrintMessage( \
-              "Caution : link clearance is less than twice the laser beam diameter. Exported svg " + \
+              "Caution : hinge width (link clearance) is less than twice the laser beam diameter. Exported svg " + \
               "will contains lines too close and the laser will almost go twice in the same position.\n" + \
-              "It is advisable to choose a clearance at least twice the kerf. You could also set clearance " + \
-              "equals to kerf if you want laser have one passage. But in the exported SVG, hinges apertures " + \
-              "are in fact square with 10e-3 width, so you have to remove manually the three others sides " + \
-              "for all square to avoid laser returning to same place.")
+              "It is advisable to choose a width at least twice the laser beam diameter. You could also set width " + \
+              "equals to the laser beam diameter if you want laser have one passage. But in the exported SVG, " + \
+              "hinges apertures are in fact square with 10e-3 width, so you have to remove manually the three  " + \
+              "others sides for all square to avoid laser returning to same place.")
 
     parts_to_fuse = [hinges_list[0].freecad_object_1.Shape.copy()]
     hinges_to_removes = []
