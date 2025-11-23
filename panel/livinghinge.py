@@ -71,7 +71,9 @@ class LivingHingesPanel:
         self.parts_vbox.addWidget(self.con_button)
         self.con_button.clicked.connect(self.add_connection)
 
-        self.connection_vbox = QtGui.QVBoxLayout(self.param_widget)
+        # Build the connection layout without parenting it to a widget that already
+        # owns another layout; it will be inserted into parts_vbox below.
+        self.connection_vbox = QtGui.QVBoxLayout()
         self.parts_vbox.addLayout(self.connection_vbox)
 
         self.connection_widget_list = []
@@ -294,6 +296,5 @@ class LivingHingeCommand:
 
 
 Gui.addCommand('livinghinge', LivingHingeCommand())
-
 
 

@@ -46,7 +46,10 @@ class ParamWidget(object):
 
     def get_grid(self):
         row_index = 0
-        widgets_grid = QtGui.QGridLayout(self.form)
+        # Do not parent the layout to the form directly; the layout is set on the
+        # group box later, and attaching it to the parent widget would conflict
+        # with any existing layout on that widget.
+        widgets_grid = QtGui.QGridLayout()
         for widget in self.widget_list:
             self.create_item(widget, widgets_grid, row_index)
             row_index += 1
@@ -174,6 +177,5 @@ class ParamWidget(object):
                         widget_config.widget_title.hide()
                         widget_config.widget.hide()
                         break
-
 
 
