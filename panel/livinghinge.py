@@ -47,6 +47,8 @@ class LivingHingesPanel:
         self.form = []
 
         self.obj = obj
+        self.init_failed = False
+        self.init_error = None
         self.global_properties_origin = copy.deepcopy(obj.globalProperties)
         self.hinges_origin = copy.deepcopy(obj.hinges)
 
@@ -87,9 +89,13 @@ class LivingHingesPanel:
 
         try:
             if len(self.hinges) == 0:
-                self.add_connection()
+                if not self.add_connection():
+                    self.init_failed = True
+                    return
         except ValueError as err:
             FreeCAD.Console.PrintError(err)
+            self.init_failed = True
+            self.init_error = err
             pass
 
         self.draw_connections()
@@ -138,9 +144,14 @@ class LivingHingesPanel:
             else:
                 raise ValueError("Please select a face belonging to the last part")
 
-            hinge = HingesProperties(freecad_face_1=face_1['face'], freecad_face_1_name=face_1['name'], freecad_object_1=face_1['freecad_object'],
-                                     freecad_face_2=face_2['face'],  freecad_face_2_name=face_2['name'], freecad_object_2=face_2['freecad_object'],
-                                     reversed_angle=reversed_angle)
+            try:
+                hinge = HingesProperties(freecad_face_1=face_1['face'], freecad_face_1_name=face_1['name'], freecad_object_1=face_1['freecad_object'],
+                                         freecad_face_2=face_2['face'],  freecad_face_2_name=face_2['name'], freecad_object_2=face_2['freecad_object'],
+                                         reversed_angle=reversed_angle)
+            except Exception as err:
+                QtGui.QMessageBox.warning(None, "Living hinges",
+                                          f"Cannot create a hinge on these faces (geometry issue): {err}")
+                return False
             link_clearance = self.global_properties_widget.get_properties().link_clearance
             if link_clearance != 0.:
                hinge.compute_min_link(link_clearance)
@@ -148,8 +159,9 @@ class LivingHingesPanel:
             widget = LivingHingeWidget(hinge)
             self.hinges.append(hinge)
             self.connection_widget_list.append(widget)
+        return True
         self.draw_connections()
-        return
+        return True
 
     def add_rev_connection(self):
         return self.add_connection(True)
@@ -237,7 +249,15 @@ class LivingHingesViewProvider:
 
     def setEdit(self, vobj=None, mode=0):
         if mode == 0:
-            FreeCADGui.Control.showDialog(LivingHingesPanel(self.Object))
+            panel = LivingHingesPanel(self.Object)
+            if getattr(panel, "init_failed", False):
+                # Remove the created feature to avoid leaving an unusable object in the document
+                doc = self.Object.Document
+                if doc is not None:
+                    doc.removeObject(self.Object.Name)
+                # A warning is already shown by add_connection; no dialog is opened
+                return False
+            FreeCADGui.Control.showDialog(panel)
             return True
 
     def setupContextMenu(self, obj, menu):
@@ -296,5 +316,3 @@ class LivingHingeCommand:
 
 
 Gui.addCommand('livinghinge', LivingHingeCommand())
-
-

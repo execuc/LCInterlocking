@@ -192,8 +192,12 @@ def do_intersection(seg1, seg2):
     if not compare_value(coplanar_val, 0.):
         raise ValueError("Not coplanar (seg1: %s, seg2: %s) => res: %s" %(str(seg1), str(seg2), str(coplanar_val)))
 
-    a = dc.cross(db).dot(da.cross(db))
-    s = dc.cross(db).dot(da.cross(db)) / da.cross(db).dot(da.cross(db))
+    cross_val = da.cross(db)
+    denom = cross_val.dot(cross_val)
+    if compare_value(denom, 0.):
+        raise ValueError("Segments cannot be intersected (parallel or degenerate geometry) for seg1: %s, seg2: %s" % (str(seg1), str(seg2)))
+
+    s = dc.cross(db).dot(cross_val) / denom
     if s >= 10e-6:
         da.scale(s, s, s)
         ip = seg1.A.add(da)
@@ -388,4 +392,3 @@ def find_same_normal_face(obj, ref_face):
         raise ValueError("Unable to find face with same normal")
 
     return found_face
-
