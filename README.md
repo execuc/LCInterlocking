@@ -43,9 +43,9 @@ Install this Addon via the builtin [FreeCAD Addon Manager](https://github.com/Fr
   git clone https://github.com/execuc/LCInterlocking .
 ```
 2. After the download completes, the module must be moved to the `Mod` subfolder of the Freecad install directory.  
-On Ubuntu 16.04 move the module to `/usr/share/freecad-daily/Mod/`  
+On Debian, the Mod directory is in `~/.local/share/FreeCAD/Mod`
+On Ubuntu 16.04 move the module to `/usr/share/freecad-daily/Mod/`  (to be checked)
 In Windows it will probably be something like `C:\Program Files\FreeCAD\Mod`  
-On Debian 9, the Mod directory is in `~/.FreeCAD/Mod/`
 
 3. Restart Freecad and the LCInterlocking module should be detected.
 </details>
@@ -64,7 +64,11 @@ If you encounter a bug please participate in the [dedicated FreeCAD discussion t
  * Rounded corner: https://www.youtube.com/watch?v=KSnMxqjA_-Q
  
 ## Changelog
-**v1.4: In progress**
+**v1.5:**
+ * Remove some QWidget warnings.
+ * Prevent creation of impossible livning hinges.
+
+**v1.4:**
  * Fix for FreeCAD 0.19.
 
 **v1.3:**
