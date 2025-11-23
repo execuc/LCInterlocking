@@ -169,6 +169,10 @@ class CrossPieceViewProvider:
         if mode == 0:
             FreeCADGui.Control.showDialog(CrossPiece(self.Object))
             return True
+    
+    def unsetEdit(self, vobj, mode=0):
+        FreeCADGui.Control.closeDialog()
+        return
 
     def setupContextMenu(self, obj, menu):
         action = menu.addAction("Edit")
@@ -210,11 +214,13 @@ class CrossPiece(TreePanel):
 
     def accept(self):
         self.compute(False)
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def reject(self):
         self.obj_join.parts = self.parts_origin
         self.obj_join.edit = False
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def compute(self, preview):
@@ -281,8 +287,8 @@ class CrossPieceCommand:
     def Activated(self):
         groupCross = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "CrossPiece")
         CrossPieceGroup(groupCross)
-        vp = CrossPieceViewProvider(groupCross.ViewObject)
-        vp.setEdit(CrossPieceViewProvider)
+        CrossPieceViewProvider(groupCross.ViewObject)
+        FreeCADGui.ActiveDocument.setEdit(groupCross.Name)
         return
 
 Gui.addCommand('crosspiece', CrossPieceCommand())

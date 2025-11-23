@@ -188,6 +188,10 @@ class MultipleJoinViewProvider:
         if mode == 0:
             FreeCADGui.Control.showDialog(MultipleJoins(self.Object))
             return True
+        
+    def unsetEdit(self, vobj, mode=0):
+        FreeCADGui.Control.closeDialog()
+        return
 
     def setupContextMenu(self, obj, menu):
         action = menu.addAction("Edit")
@@ -230,12 +234,14 @@ class MultipleJoins(TreePanel):
 
     def accept(self):
         self.compute(False)
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def reject(self):
         self.obj_join.parts = self.parts_origin
         self.obj_join.faces = self.faces_origin
         self.obj_join.edit = False
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def preview(self, fast=False):
@@ -269,8 +275,8 @@ class MultipleCommand:
     def Activated(self):
         groupJoin = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "MultiJoin")
         MultipleJoinGroup(groupJoin)
-        vp = MultipleJoinViewProvider(groupJoin.ViewObject)
-        vp.setEdit(MultipleJoinViewProvider)
+        MultipleJoinViewProvider(groupJoin.ViewObject)
+        FreeCADGui.ActiveDocument.setEdit(groupJoin.Name)
         return
 
 Gui.addCommand('multiple_tabs_command', MultipleCommand())

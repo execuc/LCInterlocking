@@ -103,11 +103,13 @@ class LivingHingesPanel:
 
     def accept(self):
         self.compute_parts()
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def reject(self):
         self.obj.globalProperties = self.global_properties_origin
         self.obj.hinges = self.hinges_origin
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def compute_parts(self):
@@ -259,6 +261,10 @@ class LivingHingesViewProvider:
                 return False
             FreeCADGui.Control.showDialog(panel)
             return True
+        
+    def unsetEdit(self, vobj, mode=0):
+        FreeCADGui.Control.closeDialog()
+        return
 
     def setupContextMenu(self, obj, menu):
         action = menu.addAction("Edit")
@@ -310,8 +316,8 @@ class LivingHingeCommand:
     def Activated(self):
         living_hinge_part = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "living_hinges")
         LivingHinges(living_hinge_part, selection.get_freecad_objects_list()[0])
-        vp = LivingHingesViewProvider(living_hinge_part.ViewObject)
-        vp.setEdit(LivingHingesViewProvider)
+        LivingHingesViewProvider(living_hinge_part.ViewObject)
+        FreeCADGui.ActiveDocument.setEdit(living_hinge_part.Name)
         return
 
 

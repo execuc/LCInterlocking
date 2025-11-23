@@ -84,6 +84,10 @@ class ViewProviderGroupBox: # self PythonFeatureViewProvider
         if mode == 0:
             FreeCADGui.Control.showDialog(MakeBox(self.Object))
             return True
+    
+    def unsetEdit(self, vobj, mode=0):
+        FreeCADGui.Control.closeDialog()
+        return
 
     def setupContextMenu(self, obj, menu):
         action = menu.addAction("Edit")
@@ -155,6 +159,7 @@ class MakeBox:
 
     def accept(self):
         self.preview()
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def reject(self):
@@ -162,6 +167,7 @@ class MakeBox:
         self.obj_box.bottom_properties = self.bottom_properties_origin
         self.obj_box.top_properties = self.top_properties_origin
         self.obj_box.need_recompute = True
+        FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def preview(self):
@@ -188,8 +194,8 @@ class MakeBoxCommand:
     def Activated(self):
         groupBox = FreeCAD.ActiveDocument.addObject("Part::FeaturePython", "Box")
         GroupBox(groupBox)
-        vp = ViewProviderGroupBox(groupBox.ViewObject)
-        vp.setEdit(ViewProviderGroupBox)
+        ViewProviderGroupBox(groupBox.ViewObject)
+        FreeCADGui.ActiveDocument.setEdit(groupBox.Name)
         return
 
 
