@@ -2,7 +2,6 @@
 
 ## Release notes
 
-## Changelog
 **v1.5.0:**
  * Remove some QWidget warnings.
  * Prevent creation of impossible livning hinges.
