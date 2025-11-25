@@ -76,7 +76,7 @@ class BottomRoundedBoxParam(ParamWidget):
                                              interval_value=[0, 3000.], decimals=2, step=1,
                                              parent_name="position",
                                              parent_value=TopBottomRoundedProperties.POSITION_INSIDE),
-                                 WidgetValue(type=float, name="radius_outside", show_name="Radius oustide", widget=None,
+                                 WidgetValue(type=float, name="radius_outside", show_name="Radius outside", widget=None,
                                              interval_value=[0, 3000.], decimals=2, step=1,
                                              parent_name="position",
                                              parent_value=TopBottomRoundedProperties.POSITION_OUTSIDE)
@@ -97,7 +97,7 @@ class TopBoxRoundedParam(ParamWidget):
                                              interval_value=[0, 3000.], decimals=2, step=1,
                                              parent_name="position",
                                              parent_value=TopBottomRoundedProperties.POSITION_INSIDE),
-                                 WidgetValue(type=float, name="radius_outside", show_name="Radius oustide", widget=None,
+                                 WidgetValue(type=float, name="radius_outside", show_name="Radius outside", widget=None,
                                              interval_value=[0, 3000.], decimals=2, step=1,
                                              parent_name="position",
                                              parent_value=TopBottomRoundedProperties.POSITION_OUTSIDE)

@@ -202,7 +202,7 @@ def do_intersection(seg1, seg2):
         raise ValueError("Wrong scale")
 
 
-# forumula : http://www.deferredprocrastination.co.uk/blog/2012/minimum-bend-radius/
+# formula : http://www.deferredprocrastination.co.uk/blog/2012/minimum-bend-radius/
 def estimate_min_link(rad_angle, thickness, clearance_width):
     tmp = (clearance_width + thickness) / (2. * math.sqrt(thickness * thickness / 2.))
     # wide hinge case

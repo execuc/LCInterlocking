@@ -92,10 +92,10 @@ class BottomBoxParam(ParamWidget):
                                  WidgetValue(type=float, name="height_shift", show_name="Height shift", widget=None,
                                              interval_value=[0, 3000.], decimals=2, step=1,
                                              parent_name="position", parent_value=TopBottomProperties.POSITION_INSIDE),
-                                 WidgetValue(type=float, name="length_outside", show_name="Length oustide", widget=None,
+                                 WidgetValue(type=float, name="length_outside", show_name="Length outside", widget=None,
                                              interval_value=[0, 3000.], decimals=2, step=1,
                                              parent_name="position", parent_value=TopBottomProperties.POSITION_OUTSIDE),
-                                 WidgetValue(type=float, name="width_outside", show_name="Width oustide", widget=None,
+                                 WidgetValue(type=float, name="width_outside", show_name="Width outside", widget=None,
                                              interval_value=[0, 3000.], decimals=2, step=1,
                                              parent_name="position", parent_value=TopBottomProperties.POSITION_OUTSIDE)
                                  ])
