@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
+  <name>LCInterlocking</name>
+  <description>Laser cut interlocking workbench for FreeCAD</description>
+  <version>1.5.0</version>
+  <date>2025-11-25</date>
+  <maintainer email="execuc@on_github.com">execuc</maintainer>
+  <author email="execuc@on_github.com">execuc</author>
+  <license file="LICENSE">LGPL-2.1-or-later</license>
+  <url type="repository" branch="main">https://github.com/execuc/LCInterlocking</url>
+  <url type="readme">https://github.com/execuc/LCInterlocking/blob/master/README.md</url>
+  <url type="documentation">https://github.com/execuc/LCInterlocking/tree/master/docs</url>
+  <icon>small_icon.svg</icon>
+  <content>
+    <workbench>
+      <classname>LCInterlockingWorkbench</classname>
+      <subdirectory>./</subdirectory>
+    </workbench>
+  </content>
+</package>
