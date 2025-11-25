@@ -10,7 +10,7 @@
   <url type="repository" branch="main">https://github.com/execuc/LCInterlocking</url>
   <url type="readme">https://github.com/execuc/LCInterlocking/blob/master/README.md</url>
   <url type="documentation">https://github.com/execuc/LCInterlocking/tree/master/docs</url>
-  <!--<icon>small_icon.svg</icon>-->
+  <icon>small_icon.svg</icon>
   <content>
     <workbench>
       <classname>LCInterlockingWorkbench</classname>
