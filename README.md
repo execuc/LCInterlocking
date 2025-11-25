@@ -1,9 +1,10 @@
-# LCInterlocking - FreeCAD Laser Cut Interlocking Module
+# LCInterlocking - Laser cut interlocking workbench for FreeCAD
+Current version 1.5.0 - [release notes](CHANGELOG.md).
 
 ![Illustration](docs/imgs/illustration.png)
 
 ## Goal
-This experimental FreeCAD module is used to create interlocking cut parts from 3D to 2D SVG. 
+This experimental FreeCAD workbench is used to create interlocking cut parts from 3D to 2D SVG. 
 It was created for laser cutting but can work with CNC router.  
 
 **Important Note:**  
@@ -11,7 +12,7 @@ It was created for laser cutting but can work with CNC router.
 **Please double check the results of this module!**
 
 ## Panel
-This panel appears when "Laser cut Interlocking" module is selected:
+This panel appears when "Laser cut Interlocking" workbench is selected:
 ![Illustration](docs/imgs/panel.png)
 
 ## Tools
@@ -43,9 +44,9 @@ Install this Addon via the builtin [FreeCAD Addon Manager](https://github.com/Fr
   git clone https://github.com/execuc/LCInterlocking .
 ```
 2. After the download completes, the module must be moved to the `Mod` subfolder of the Freecad install directory.  
-On Debian, the Mod directory is in `~/.local/share/FreeCAD/Mod`
-On Ubuntu 16.04 move the module to `/usr/share/freecad-daily/Mod/`  (to be checked)
-In Windows it will probably be something like `C:\Program Files\FreeCAD\Mod`  
+ - On Linux: `/home/<username>/.local/share/FreeCAD/Mod`
+ - On Windows: `C:\Users\<username>\Appdata\Roaming\FreeCAD\Mod\`
+ - On macOS: `/Users/<username>/Library/Application Support/FreeCAD/Mod/`
 
 3. Restart Freecad and the LCInterlocking module should be detected.
 </details>
@@ -62,29 +63,6 @@ If you encounter a bug please participate in the [dedicated FreeCAD discussion t
  * Rounded box tool:  https://www.youtube.com/watch?v=lEOgZ6k9Vxw
  * Crosspiece: https://www.youtube.com/watch?v=tIchogx5BLE
  * Rounded corner: https://www.youtube.com/watch?v=KSnMxqjA_-Q
- 
-## Changelog
-**v1.5:**
- * Remove some QWidget warnings.
- * Prevent creation of impossible livning hinges.
-
-**v1.4:**
- * Fix for FreeCAD 0.19.
-
-**v1.3:**
- * Fix tab link widget not displayed.
-
-**v1.2:**
- * Fix float entry max value(99.99) bug.
- 
-**v1.1:**
- * Restore crosspiece dog bones and node options.
- * Add fast preview option for interlocking tool.
-
-**v1.0:**
- * Add a preview button to interlocking and crosspiece tool.
- * All tools can now be reedited.
- * Add support to Python 3 of Freecad 0.18.
  
 ## Gallery
 ![Illustration](docs/imgs/illustration2.png)  
