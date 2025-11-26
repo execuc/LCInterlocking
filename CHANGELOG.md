@@ -4,7 +4,7 @@
 
 **v1.5.0:**
  * Remove some QWidget warnings.
- * Prevent creation of impossible livning hinges.
+ * Prevent creation of impossible living hinges.
 
 **v1.4.0:**
  * Fix for FreeCAD 0.19.
