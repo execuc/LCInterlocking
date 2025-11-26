@@ -7,7 +7,7 @@
   <maintainer>execuc</maintainer>
   <author>execuc</author>
   <license file="LICENSE">LGPL-2.1-or-later</license>
-  <url type="repository" branch="main">https://github.com/execuc/LCInterlocking</url>
+  <url type="repository" branch="master">https://github.com/execuc/LCInterlocking</url>
   <url type="readme">https://github.com/execuc/LCInterlocking/blob/master/README.md</url>
   <url type="documentation">https://github.com/execuc/LCInterlocking/tree/master/docs</url>
   <icon>small_icon.svg</icon>
