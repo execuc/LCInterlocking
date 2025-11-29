@@ -128,6 +128,12 @@ def transform_part(tab_to_add, face):
 def check_intersect(tab_to_add, face, part_interactor_properties):
     tab_to_add_transformed = transform_part(tab_to_add, face)
     part_shape_transformed = part_interactor_properties.freecad_object.Shape
+
+    geo_group = part_interactor_properties.freecad_object.getParentGeoFeatureGroup()
+    while geo_group is not None:
+        part_shape_transformed = part_shape_transformed.transformGeometry(geo_group.Placement.toMatrix())
+        geo_group = geo_group.getParentGeoFeatureGroup()
+
     #print "volume %f" % part_shape_transformed.common(tab_to_add_transformed).Volume
     return part_shape_transformed.common(tab_to_add_transformed).Volume > 0.001, tab_to_add_transformed
 
@@ -147,9 +153,7 @@ def transform(part, referentiel_face, transform_matrix=None, y_invert = False):
 # http://gamedev.stackexchange.com/questions/20097/how-to-calculate-a-3x3-rotation-matrix-from-2-direction-vectors
 # http://www.freecadweb.org/api/Vector.html
 def get_matrix_transform(face):
-    x_local, y_local_not_normalized, z_local_not_normalized = get_local_axis(face)
-    y_local = y_local_not_normalized.normalize()
-    z_local = z_local_not_normalized.normalize()
+    x_local, y_local, z_local = get_local_axis_normalized(face)
 
     m = FreeCAD.Matrix()
     if z_local is not None:
@@ -504,6 +508,14 @@ class MaterialElement:
         self.toAdd = []
         self.toRemove = []
 
+        # Relocate the shape into global coordinate space
+        self.global_shape = properties.freecad_object.Shape
+
+        transform_group = properties.freecad_object.getParentGeoFeatureGroup()
+        while transform_group is not None:
+            self.global_shape = self.global_shape.transformGeometry(transform_group.Placement.toMatrix())
+            transform_group = transform_group.getParentGeoFeatureGroup()
+
     def reset_add_remove(self):
         self.toAdd = []
         self.toRemove = []
@@ -519,7 +531,7 @@ class MaterialElement:
             part = assemble_list_element(self.toAdd)
         else:
             part = assemble_list_element_fast(self.toAdd)
-        new_shape = self.properties.freecad_object.Shape
+        new_shape = self.global_shape
         if part is not None:
             new_shape = new_shape.fuse(part)
         part = assemble_list_element(self.toRemove)
