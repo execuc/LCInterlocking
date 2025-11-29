@@ -2,9 +2,10 @@
 
 ## Release notes
 
-**v1.5.0:**
+**v1.5.1:**
  * Remove some QWidget warnings.
  * Prevent creation of impossible living hinges.
+ * Handle more cases for cross part.
 
 **v1.4.0:**
  * Fix for FreeCAD 0.19.
