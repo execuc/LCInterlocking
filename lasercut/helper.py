@@ -391,7 +391,7 @@ def check_limit_y_on_for_tab(tab_face, height, pos_y, width, thickness, material
     return y_plus_inside, y_minus_inside
 
 
-def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, material_plane, dog_bone=False):
+def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, material_plane):
 
     z_plus_inside, z_minus_inside = check_limit_z(tab_face, width, pos_y, material_face, material_plane)
     y_plus_inside, y_minus_inside = check_limit_y(tab_face, material_face.thickness, pos_y, width, material_plane)
@@ -427,8 +427,8 @@ def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, materia
     hole = Part.makeBox(corrected_length, corrected_width, corrected_height, origin)
     hole.translate(FreeCAD.Vector(0, pos_y, 0))
 
-    if dog_bone:
-        hole = make_dog_bone_on_limits_on_yz(hole, corrected_length,
+    if tab_face.dog_bone:
+        hole = make_dog_bone_on_limits_on_yz(tab_face, hole, corrected_length,
                                              z_minus_inside and y_minus_inside,
                                              z_minus_inside and y_plus_inside,
                                              z_plus_inside and y_minus_inside,
@@ -436,19 +436,34 @@ def tab_join_create_hole_on_plane(tab_face, width, pos_y, material_face, materia
     return hole
 
 
-def make_dog_bone_on_limits_on_yz(shape, length,
+def make_dog_bone_on_limits_on_yz(tab_face, shape, length,
                                   y_min_z_min=True, y_max_z_min=True, y_min_z_max=True, y_max_z_max=True):
     bound_box = shape.BoundBox
-    radius = min(bound_box.YMax - bound_box.YMin, bound_box.ZMax - bound_box.ZMin) * 2 / 30.
-    shift = radius / 2.0
+
+    if not hasattr(tab_face, 'dog_bone_diameter_auto') or tab_face.dog_bone_diameter_auto:
+        radius = min(bound_box.YMax - bound_box.YMin, bound_box.ZMax - bound_box.ZMin) * 2 / 30.
+    else:
+        radius = tab_face.dog_bone_diameter / 2.0
+
+    FreeCAD.Console.PrintError("Radius make_dog_bone_on_limits_on_yz: %f\n" % radius)
+
+    base_shift = radius / 2.0
+
+    shift_x = base_shift
+    if hasattr(tab_face, 'dog_bone_shift_x'):
+        shift_x += tab_face.dog_bone_shift_x
+    shift_y = base_shift
+    if hasattr(tab_face, 'dog_bone_shift_y'):
+        shift_y += tab_face.dog_bone_shift_y
+
     if y_min_z_min:
-        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMin + shift, bound_box.ZMin + shift, length, radius))
+        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMin + shift_y, bound_box.ZMin + shift_x, length, radius))
     if y_max_z_min:
-        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMax - shift, bound_box.ZMin + shift, length, radius))
+        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMax - shift_y, bound_box.ZMin + shift_x, length, radius))
     if y_min_z_max:
-        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMin + shift, bound_box.ZMax - shift, length, radius))
+        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMin + shift_y, bound_box.ZMax - shift_x, length, radius))
     if y_max_z_max:
-        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMax - shift, bound_box.ZMax - shift, length, radius))
+        shape = shape.fuse(make_dog_bone_on_yz(bound_box.YMax - shift_y, bound_box.ZMax - shift_x, length, radius))
     return shape
 
 
@@ -465,6 +480,9 @@ def make_dog_bone_on_yz(pos_y, pos_z, height, radius):
 def make_dog_bone_on_limits_on_xy(shape, length, x_min_only=False):
     bound_box = shape.BoundBox
     radius = min(bound_box.XMax - bound_box.XMin, bound_box.YMax - bound_box.YMin) * 2 / 30.
+
+    FreeCAD.Console.PrintError("Radius make_dog_bone_on_limits_on_xy: %f\n" % radius)
+
     shift = radius / 2.0
     shape = shape.fuse(make_dog_bone_on_xy(bound_box.XMin + shift, bound_box.YMin + shift, length, radius))
     if x_min_only is False:
