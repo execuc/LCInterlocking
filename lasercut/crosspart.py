@@ -249,8 +249,8 @@ def transform(part, referential_face, transform_matrix):
 
 
 def retrieve_face_axis(sorted_areas_by_normals, shape):
-    test_face = sorted_areas_by_normals[2][2][0] # get medium faces -> list of faces -> first face
-    z_axis = sorted_areas_by_normals[0][2][0].normalAt(0, 0) # get smallest faces -> list of faces -> first face
+    test_face = sorted_areas_by_normals[2].faces_sorted_descending[0]  # get medium faces -> first face
+    z_axis = sorted_areas_by_normals[0].faces_sorted_descending[0].normalAt(0, 0)  # get smallest faces -> first face
     x_axis = None
     y_axis = None
     if is_inside(test_face, shape):
@@ -339,7 +339,7 @@ def make_cross_parts(parts):
             if len(sorted_areas_by_normals) != 3:
                 raise ValueError(str_parts_name + " : intersection is not rectangular box")
             smallest_area = helper.sort_area_shape_faces(intersect_shape)[0]
-            referential_faces = smallest_area[2]
+            referential_faces = smallest_area.faces_sorted_descending
             first_face = referential_faces[0]
             second_face = referential_faces[1]
             axis = retrieve_face_axis(sorted_areas_by_normals, first_shape)

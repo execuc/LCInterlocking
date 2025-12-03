@@ -93,12 +93,12 @@ def retrieve_thickness_from_bounded_box():
 def retrieve_thickness_from_biggest_face(freecad_object):
     area_faces = biggest_area_faces(freecad_object.Shape)
     # order faces by normals
-    sub_areas_face = sort_area_shape_list(area_faces[2])
+    sub_areas_face = sort_area_shape_list(area_faces.faces_sorted_descending)
     # TODO : check if normals at opposite
-    #list_edges_face1 = Part.__sortEdges__(area_faces[2][0].Edges)
-    #list_edges_face2 = Part.__sortEdges__(area_faces[2][1].Edges)
-    list_edges_face1 = Part.__sortEdges__(sub_areas_face[0][2][0].Edges)
-    list_edges_face2 = Part.__sortEdges__(sub_areas_face[1][2][0].Edges)
+    #list_edges_face1 = Part.__sortEdges__(area_faces.faces_sorted_descending[0].Edges)
+    #list_edges_face2 = Part.__sortEdges__(area_faces.faces_sorted_descending[1].Edges)
+    list_edges_face1 = Part.__sortEdges__(sub_areas_face[0].faces_sorted_descending[0].Edges)
+    list_edges_face2 = Part.__sortEdges__(sub_areas_face[1].faces_sorted_descending[0].Edges)
 
     list_pts_face1 = sort_quad_vertex(list_edges_face1, False)
     if list_pts_face1 is None:

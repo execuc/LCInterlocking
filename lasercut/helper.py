@@ -26,8 +26,22 @@ import Part
 import FreeCAD
 
 import math
+from dataclasses import dataclass
 from operator import itemgetter, attrgetter
 
+
+@dataclass
+class FaceGroup:
+    """Groups faces with the same normal orientation.
+    
+    Attributes:
+        normal: The normal vector of the faces in this group
+        total_area: Total surface area of all faces in the group
+        faces_sorted_descending: List of Face objects sorted by area (largest first)
+    """
+    normal: 'FreeCAD.Vector'
+    total_area: float
+    faces_sorted_descending: list
 
 # http://stackoverflow.com/questions/2535917/copy-kwargs-to-self
 class ObjectProperties(object):
@@ -200,7 +214,7 @@ def get_local_axis(face):
 
         computed_x_local = y_local.cross(z_local)
 
-        if compare_freecad_vector(computed_x_local, x_local):
+        if vectors_equal(computed_x_local, x_local):
             #FreeCAD.Console.PrintError("\nFound\n")
             #FreeCAD.Console.PrintError(x_local)
             #FreeCAD.Console.PrintError(y_local)
@@ -218,7 +232,7 @@ def get_local_axis_normalized(face):
     return x_local, y_local_not_normalized, z_local_not_normalized
 
 
-def compare_freecad_vector(vector1, vector2, epsilon=10e-6):
+def vectors_equal(vector1, vector2, epsilon=10e-6):
     vector = vector1.sub(vector2)
     if math.fabs(vector.x) < epsilon and math.fabs(vector.y) < epsilon and math.fabs(vector.z) < epsilon:
         return True
@@ -232,7 +246,19 @@ def compare_value(value1, value2, epsilon=10e-6):
     return False
 
 
-def compare_freecad_vector_direction(vector1, vector2, epsilon=10e-6):
+def vectors_parallel(vector1, vector2, epsilon=1e-6):
+    """Check if two vectors are parallel (same or opposite direction).
+    
+    Tests if vectors are colinear by checking if their cross product is near zero.
+    
+    Args:
+        vector1: First FreeCAD Vector
+        vector2: Second FreeCAD Vector
+        epsilon: Tolerance for comparison (default: 1e-6)
+    
+    Returns:
+        True if vectors are parallel, False otherwise
+    """
     return math.fabs(vector1.cross(vector2).Length) < epsilon
 
 
@@ -246,9 +272,9 @@ def sort_quad_vertex(list_edges, reverse):
         vertex1 = edge.Vertexes[0].Point
         vertex2 = edge.Vertexes[1].Point
 
-        if compare_freecad_vector(vertex1, list_points[-1]):
+        if vectors_equal(vertex1, list_points[-1]):
             list_points.append(vertex2)
-        elif compare_freecad_vector(vertex2, list_points[-1]):
+        elif vectors_equal(vertex2, list_points[-1]):
             list_points.append(vertex1)
         else:
             return None
@@ -257,52 +283,86 @@ def sort_quad_vertex(list_edges, reverse):
 
 
 def biggest_area_faces(freecad_shape):
+    """Returns the FaceGroup with the largest total area from a shape."""
     sorted_list = sort_area_shape_faces(freecad_shape)
-    biggest_area_face = sorted_list[-1]
-#       contains : 0:normal, 1:area mm2, 2; list of faces
-    return biggest_area_face
+    return sorted_list[-1]
 
 
 def smallest_area_faces(freecad_shape):
+    """Returns the FaceGroup with the smallest total area from a shape."""
     sorted_list = sort_area_shape_faces(freecad_shape)
-    smallest_area_face = sorted_list[0]
-#       contains : 0:normal, 1:area mm2, 2; list of faces
-    return smallest_area_face
+    return sorted_list[0]
 
 
-#   Returns face grouping by normal,sorted by the amount of surface (descending)
 def sort_area_shape_faces(shape):
-    return sort_area_face_common(shape.Faces, compare_freecad_vector_direction)
+    """Returns face groups of a shape sorted by total area (ascending).
+    Args:
+        shape: The shape to sort the faces of.
+    Returns:
+        A list of FaceGroup objects sorted by total area (ascending).
+    """
+    return group_faces_by_normal(shape.Faces, normal_comparison_func=vectors_parallel)
 
 
 def sort_area_shape_list(faces_list):
-    return sort_area_face_common(faces_list, compare_freecad_vector)
+    """Returns face groups of a list of faces sorted by total area (ascending).
+    Args:
+        faces_list: The list of faces to sort.
+    Returns:
+        A list of FaceGroup objects sorted by total area (ascending).
+    """
+    return group_faces_by_normal(faces_list, normal_comparison_func=vectors_equal)
 
 
-def sort_area_face_common(faces, test_function=compare_freecad_vector_direction):
-    normal_area_list = []
+def group_faces_by_normal(faces, normal_comparison_func=vectors_parallel):
+    """
+    Groups faces by their normal orientation and sorts them by total area.
+    
+    Faces with similar normals (as determined by normal_comparison_func) are grouped together.
+    Within each group, faces are sorted by area in descending order.
+    The groups themselves are sorted by total area in ascending order.
+    
+    Args:
+        faces: List of Face objects to categorize.
+        normal_comparison_func: Function to compare two normal vectors.
+            Defaults to vectors_parallel (considers vectors parallel if they point 
+            in the same or opposite direction).
+    
+    Returns:
+        List of FaceGroup objects sorted by total_area (smallest first).
+    """
+    face_groups = []
+    
     for face in faces:
         try:
-            # print face
             normal = face.normalAt(0, 0)
-            # print normal
-            found = False
-            for i in range(len(normal_area_list)):
-                normal_test = normal_area_list[i][0]
-                if test_function(normal, normal_test):
-                    found = True
-                    normal_area_list[i][1] += face.Area
-                    normal_area_list[i][2].append(face)
-                    tmp = sorted(normal_area_list[i][2], key=attrgetter('Area'),  reverse=True)
-                    normal_area_list[i][2] = tmp
+            
+            # Try to find an existing group with a matching normal
+            matching_group = None
+            for group in face_groups:
+                if normal_comparison_func(normal, group.normal):
+                    matching_group = group
                     break
-            if not found:
-                normal_area_list.append([normal, face.Area, [face]])
+            
+            if matching_group:
+                # Add face to existing group and update total area
+                matching_group.total_area += face.Area
+                matching_group.faces_sorted_descending.append(face)
+                # Keep faces sorted by area (largest first)
+                matching_group.faces_sorted_descending.sort(key=attrgetter('Area'), reverse=True)
+            else:
+                # Create a new group for this normal orientation
+                face_groups.append(FaceGroup(
+                    normal=normal,
+                    total_area=face.Area,
+                    faces_sorted_descending=[face]
+                ))
+                
         except Exception as ex:
             FreeCAD.Console.PrintError("Something wrong with face ", face, " : ", ex)
-    # print normal_area_list
-    sorted_list = sorted(normal_area_list, key=itemgetter(1))
-    return sorted_list
+    
+    # Sort groups by total area (smallest first)
+    return sorted(face_groups, key=attrgetter('total_area'))
 
 #            X (Length)
 #            |

@@ -25,7 +25,7 @@
 import Part
 import FreeCAD
 import math
-from lasercut.helper import transform, compare_freecad_vector, compare_value, Segment, assemble_list_element
+from lasercut.helper import transform, vectors_equal, compare_value, Segment, assemble_list_element
 
 
 def complete_hinges_properties(hinge, face_1, face_2, storeAll = False):
@@ -388,7 +388,7 @@ def find_same_normal_face(obj, ref_face):
     for face in obj.Faces:
         normal = face.normalAt(0, 0)
 
-        if compare_freecad_vector(ref_normal, normal) is True and compare_value(ref_face.Area, face.Area) is True:
+        if vectors_equal(ref_normal, normal) is True and compare_value(ref_face.Area, face.Area) is True:
             found_face = face
             break
     if found_face is None:
