@@ -317,73 +317,69 @@ def remove_intersections(first_part, second_part, referential_faces, axis, inver
 # Y is the width of part 1.
 # Z is the height of the intersection
 def make_cross_parts(parts):
-    parts_element = []
-    for part in parts:
-        mat_element = helper.MaterialElement(part)
-        parts_element.append(mat_element)
+    part_elements_list = [helper.MaterialElement(part) for part in parts]
 
-    for subset in itertools.combinations(parts_element, 2):
-        first_part = subset[0]
-        second_part = subset[1]
-        if parts_element.index(subset[0]) > parts_element.index(subset[1]):
-            first_part = subset[1]
-            second_part = subset[0]
-
-        first_shape = first_part.properties.freecad_object.Shape
-        second_shape = second_part.properties.freecad_object.Shape
-        intersect_shape = first_shape.common(second_shape)
+    for part1, part2 in itertools.combinations(part_elements_list, 2):
+        shape1 = part1.properties.freecad_object.Shape
+        shape2 = part2.properties.freecad_object.Shape
+        intersect_shape = shape1.common(shape2)
         if intersect_shape.Volume > 0.001:
             #Part.show(intersect_shape)
             sorted_areas_by_normals = helper.sort_area_shape_faces(intersect_shape)
-            str_parts_name = first_part.get_name() + " -> " + second_part.get_name()
+            str_parts_name = part1.get_name() + " -> " + part2.get_name()
             if len(sorted_areas_by_normals) != 3:
                 raise ValueError(str_parts_name + " : intersection is not rectangular box")
-            smallest_area = helper.sort_area_shape_faces(intersect_shape)[0]
+            smallest_area = sorted_areas_by_normals[0]
             referential_faces = smallest_area.faces_sorted_descending
-            first_face = referential_faces[0]
-            second_face = referential_faces[1]
-            axis = retrieve_face_axis(sorted_areas_by_normals, first_shape)
+            face1 = referential_faces[0]
+            face2 = referential_faces[1]
+            axis = retrieve_face_axis(sorted_areas_by_normals, shape1)
             # Examine box border to determine shapes configuration
-            first_face_first_shape = is_inside(first_face, first_shape)
-            second_face_first_shape = is_inside(second_face, first_shape)
-            first_face_second_shape = is_inside(first_face, second_shape)
-            second_face_second_shape = is_inside(second_face, second_shape)
-            #print "first_face_first_shape: " + str(first_face_first_shape) + " second_face_first_shape:" + str(second_face_first_shape) + " first_face_second_shape: " + str(first_face_second_shape) + " second_face_second_shape:" + str(second_face_second_shape)
-            if not first_face_first_shape and not second_face_first_shape \
-                    and first_face_second_shape and second_face_second_shape:
+            face1_in_shape1 = is_inside(face1, shape1)
+            face2_in_shape1 = is_inside(face2, shape1)
+            face1_in_shape2 = is_inside(face1, shape2)
+            face2_in_shape2 = is_inside(face2, shape2)
+            #print "face1_in_shape1: " + str(face1_in_shape1) + " face2_in_shape1:" + str(face2_in_shape1) + " face1_in_shape2: " + str(face1_in_shape2) + " face2_in_shape2:" + str(face2_in_shape2)
+            if not face1_in_shape1 and not face2_in_shape1 \
+                    and face1_in_shape2 and face2_in_shape2:
                 raise ValueError(str_parts_name + " : a part is included in the other.")
-            elif first_face_first_shape and second_face_first_shape \
-                    and not first_face_second_shape and not second_face_second_shape:
+            elif face1_in_shape1 and face2_in_shape1 \
+                    and not face1_in_shape2 and not face2_in_shape2:
                 raise ValueError(str_parts_name + " : a part is included in the other.")
-            elif not first_face_first_shape and not second_face_first_shape \
-                    and not first_face_second_shape and not second_face_second_shape:
+            # Case where both parts fit together (same height and aligned)
+            # TODO: Need a way to determine in which way the pieces will fit together,
+            #       is part1 will be inserted into part2 or part2 will be inserted into part1?
+            elif not face1_in_shape1 and not face2_in_shape1 \
+                    and not face1_in_shape2 and not face2_in_shape2:
                 #print str_parts_name + " : same height parts"
-                remove_intersections(first_part, second_part, referential_faces, axis)
-            elif not first_face_first_shape and second_face_first_shape \
-                    and first_face_second_shape and not second_face_second_shape:
+                remove_intersections(part1, part2, referential_faces, axis)
+            # Case where part1 is above part2
+            elif not face1_in_shape1 and face2_in_shape1 \
+                    and face1_in_shape2 and not face2_in_shape2:
                 #print str_parts_name + " : a part is above the other (1)"
-                remove_intersections(first_part, second_part, referential_faces, axis)
-            elif first_face_first_shape and not second_face_first_shape \
-                    and not first_face_second_shape and second_face_second_shape:
+                remove_intersections(part1, part2, referential_faces, axis)
+            # Case where part2 is above part1
+            elif face1_in_shape1 and not face2_in_shape1 \
+                    and not face1_in_shape2 and face2_in_shape2:
                 #print str_parts_name + " : a part is above the other (2)"
-                remove_intersections(first_part, second_part, referential_faces, axis, True)
-            elif not first_face_first_shape and not second_face_first_shape \
-                    and first_face_second_shape and not second_face_second_shape:
-                # Case where face 2 is common base and shape 2 is higher
-                remove_intersections(first_part, second_part, referential_faces, axis)
-            elif first_face_first_shape and not second_face_first_shape \
-                    and not first_face_second_shape and not second_face_second_shape:
-                # Case where face 2 is common base and shape 1 is higher
-                remove_intersections(first_part, second_part, referential_faces, axis, True)
-            elif not first_face_first_shape and second_face_first_shape \
-                    and not first_face_second_shape and not second_face_second_shape:
-                # Case where face 1 is common base and shape 1 is higher
-                remove_intersections(first_part, second_part, referential_faces, axis)
-            elif not first_face_first_shape and not second_face_first_shape \
-                    and not first_face_second_shape and second_face_second_shape:
-                # Case where face 1 is common and shape 2 is higher
-                remove_intersections(first_part, second_part, referential_faces, axis, True)
+                remove_intersections(part1, part2, referential_faces, axis, True)
+            # Case where face2 is common base and part2 is higher
+            elif not face1_in_shape1 and not face2_in_shape1 \
+                    and face1_in_shape2 and not face2_in_shape2:
+                remove_intersections(part1, part2, referential_faces, axis)
+            # Case where face2 is common base and part1 is higher
+            elif face1_in_shape1 and not face2_in_shape1 \
+                    and not face1_in_shape2 and not face2_in_shape2:
+                remove_intersections(part1, part2, referential_faces, axis, True)
+            # Case where face1 is common base and part1 is higher
+            elif not face1_in_shape1 and face2_in_shape1 \
+                    and not face1_in_shape2 and not face2_in_shape2:
+                remove_intersections(part1, part2, referential_faces, axis)
+            # Case where face1 is common and part2 is higher
+            elif not face1_in_shape1 and not face2_in_shape1 \
+                    and not face1_in_shape2 and face2_in_shape2:
+                remove_intersections(part1, part2, referential_faces, axis, True)
             else:
                 raise ValueError("Not managed")
 
-    return parts_element
+    return part_elements_list
