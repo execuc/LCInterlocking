@@ -54,7 +54,7 @@ class CrossPieceGroup:
         if prop == "need_recompute":
             self.execute(fp)
         elif prop == "preview":
-            self.preview(fp)
+            self.full_preview(fp)
         elif prop == "edit":
             self.editMode(fp)
 
@@ -74,21 +74,21 @@ class CrossPieceGroup:
             for obj in fp.generatedParts:
                 obj.ViewObject.show()
 
-    def preview(self, fp):
+    def full_preview(self, fp):
         if fp.preview != PREVIEW_NONE:
             fp.preview = PREVIEW_NONE
 
             document = fp.Document
-            preview_doc_name = str(fp.Name) + "_preview_parts"
+            full_preview_doc_name = str(fp.Name) + "_preview_parts"
             new_doc = False
             try:
-                preview_doc = FreeCAD.getDocument(preview_doc_name)
-                objs = preview_doc.Objects
+                full_preview_doc = FreeCAD.getDocument(full_preview_doc_name)
+                objs = full_preview_doc.Objects
                 for obj in objs:
-                    preview_doc.removeObject(obj.Name)
+                    full_preview_doc.removeObject(obj.Name)
             except:
                 new_doc = True
-                preview_doc = FreeCAD.newDocument(preview_doc_name)
+                full_preview_doc = FreeCAD.newDocument(full_preview_doc_name)
 
             parts = []
             tabs = []
@@ -109,11 +109,11 @@ class CrossPieceGroup:
                         invert_states[key] = value
             computed_parts = make_cross_parts(parts, dry_run=False, invert_states=invert_states)
             for part in computed_parts:
-                new_shape = preview_doc.addObject("Part::Feature", part.get_new_name())
+                new_shape = full_preview_doc.addObject("Part::Feature", part.get_new_name())
                 new_shape.Shape = part.get_shape()
-            preview_doc.recompute()
+            full_preview_doc.recompute()
             if new_doc:
-                FreeCADGui.getDocument(preview_doc.Name).ActiveView.fitAll()
+                FreeCADGui.getDocument(full_preview_doc.Name).ActiveView.fitAll()
 
 
     def execute(self, fp):
@@ -231,6 +231,7 @@ class CrossPiece(TreePanel):
         self.interactions_list_widget = None
         self.interaction_checkboxes = {}  # Store checkboxes by interaction key
         self.selected_interaction = None
+        self.live_preview_objects = []  # Store temporary objects created for interaction preview
         
         super(CrossPiece, self).__init__("Crosspiece", obj_join)
         self.obj_join = obj_join
@@ -238,32 +239,50 @@ class CrossPiece(TreePanel):
         self.obj_join.edit = True
 
     def accept(self):
+        # Clear temporary preview before accepting
+        self.clear_live_preview()
         self.compute(False)
         FreeCADGui.ActiveDocument.resetEdit()
         return True
 
     def reject(self):
+        # Clear temporary preview before rejecting
+        self.clear_live_preview()
         self.obj_join.parts = self.parts_origin
         self.obj_join.edit = False
         FreeCADGui.ActiveDocument.resetEdit()
         return True
 
-    def compute(self, preview):
+    def compute(self, full_preview):
         self.save_items_properties()
         self.save_link_properties()
         self.save_invert_states()  # Save invert checkbox states
-        if not preview:
+        if not full_preview:
             self.obj_join.need_recompute = True
         else:
             self.obj_join.preview = PREVIEW_NORMAL
 
-    def preview(self):
+    def full_preview(self):
+        # Clear temporary preview before full preview
+        self.clear_live_preview()
         self.compute(True)
         self.selection_changed(None, None)
         return
     
     def selection_changed(self, selected, deselected):
         """Override to deselect interactions when tree selection changes"""
+        # Only clear live preview if we actually have a selection in the tree (not just deselection)
+        # Check if there are selected items in the tree
+        indexes = self.tree_view_widget.selectedIndexes()
+        if len(indexes) == 0:
+            # No selection in tree - clear live preview and restore original parts
+            self.clear_live_preview()
+            self.selected_interaction = None
+        else:
+            # There is a selection in tree - clear live preview (interaction is being deselected)
+            self.clear_live_preview()
+            self.selected_interaction = None
+        
         # Deselect interactions when tree selection changes
         # Block signals to prevent recursive calls
         if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
@@ -279,7 +298,7 @@ class CrossPiece(TreePanel):
         #Preview button
         v_box = QtGui.QVBoxLayout()
         preview_button = QtGui.QPushButton('Preview', self.tree_widget)
-        preview_button.clicked.connect(self.preview)
+        preview_button.clicked.connect(self.full_preview)
         #self.fast_preview = QtGui.QCheckBox("Fast preview", self.tree_widget)
         line = QtGui.QFrame(self.tree_widget)
         line.setFrameShape(QtGui.QFrame.HLine);
@@ -441,9 +460,11 @@ class CrossPiece(TreePanel):
                     else:
                         actual_state = interaction['invert_y']
                     
-                    # Set initial state (no signal connection - state will be saved on OK/Preview/Add/Remove)
+                    # Set initial state
                     checkbox.setChecked(actual_state)
                     self.interaction_checkboxes[interaction_key] = checkbox
+                    # Connect checkbox to update preview when clicked
+                    checkbox.stateChanged.connect(lambda state, key=interaction_key: self.on_invert_changed(key, state))
                     # Center the checkbox in the cell
                     checkbox_widget = QtGui.QWidget()
                     checkbox_layout = QtGui.QHBoxLayout(checkbox_widget)
@@ -464,8 +485,151 @@ class CrossPiece(TreePanel):
             if hasattr(self, 'interaction_checkboxes'):
                 self.interaction_checkboxes.clear()
     
+    def clear_live_preview(self):
+        """Clear temporary preview objects created for interaction preview and restore original parts"""
+        # Remove temporary objects
+        if hasattr(self, 'live_preview_objects'):
+            for obj in self.live_preview_objects:
+                try:
+                    if obj and obj in self.active_document.Objects:
+                        self.active_document.removeObject(obj.Name)
+                except:
+                    pass
+            self.live_preview_objects = []
+        # Restore original parts visibility
+        # Restore all parts from document using part names
+        if hasattr(self.obj_join, 'parts'):
+            for part in self.obj_join.parts.lst:
+                try:
+                    part_obj = self.active_document.getObject(part.name)
+                    if part_obj and hasattr(part_obj, 'ViewObject'):
+                        part_obj.ViewObject.show()
+                except:
+                    pass
+        
+        # Also restore parts from fromParts
+        if hasattr(self.obj_join, 'fromParts') and self.obj_join.fromParts:
+            for obj in self.obj_join.fromParts:
+                try:
+                    if obj and hasattr(obj, 'ViewObject'):
+                        obj.ViewObject.show()
+                except:
+                    pass
+    
+    def generate_live_preview(self, interaction):
+        """Generate temporary preview objects for the selected interaction"""
+        if not interaction:
+            return
+        try:
+            # Clear any existing live preview first
+            if hasattr(self, 'live_preview_objects') and len(self.live_preview_objects) > 0:
+                # Remove temporary objects
+                for obj in self.live_preview_objects:
+                    try:
+                        if obj and obj in self.active_document.Objects:
+                            self.active_document.removeObject(obj.Name)
+                    except:
+                        pass
+                self.live_preview_objects = []
+            
+            # Restore visibility of ALL parts first (in case some were hidden from previous interaction)
+            if hasattr(self.obj_join, 'parts'):
+                for part in self.obj_join.parts.lst:
+                    try:
+                        part_obj = self.active_document.getObject(part.name)
+                        if part_obj and hasattr(part_obj, 'ViewObject'):
+                            part_obj.ViewObject.show()
+                    except:
+                        pass
+            
+            # Get the two parts for this interaction
+            part1_name = interaction['part1_name']
+            part2_name = interaction['part2_name']
+            
+            # Hide only the two parts involved in this interaction (not all parts)
+            # Hide part1
+            try:
+                part1_obj = self.active_document.getObject(part1_name)
+                if part1_obj and hasattr(part1_obj, 'ViewObject'):
+                    part1_obj.ViewObject.hide()
+            except:
+                pass
+            
+            # Hide part2
+            try:
+                part2_obj = self.active_document.getObject(part2_name)
+                if part2_obj and hasattr(part2_obj, 'ViewObject'):
+                    part2_obj.ViewObject.hide()
+            except:
+                pass
+            
+            # Find the parts in the parts list
+            part1 = None
+            part2 = None
+            for part in self.obj_join.parts.lst:
+                if part.name == part1_name:
+                    part1 = part
+                elif part.name == part2_name:
+                    part2 = part
+            
+            if part1 and part2:
+                # Create deep copies and initialize
+                cp_part1 = copy.deepcopy(part1)
+                cp_part2 = copy.deepcopy(part2)
+                part1_obj = self.active_document.getObject(part1_name)
+                part2_obj = self.active_document.getObject(part2_name)
+                if part1_obj:
+                    cp_part1.recomputeInit(part1_obj)
+                if part2_obj:
+                    cp_part2.recomputeInit(part2_obj)
+                
+                # Get invert state for this interaction
+                interaction_key = (part1_name, part2_name)
+                key_str = "%s|%s" % (part1_name, part2_name)
+                invert_states = {}
+                # Get invert state from checkbox if available (most up-to-date)
+                invert_y = False
+                if hasattr(self, 'interaction_checkboxes') and interaction_key in self.interaction_checkboxes:
+                    # Get current state directly from checkbox
+                    invert_y = self.interaction_checkboxes[interaction_key].isChecked()
+                elif hasattr(self.obj_join, 'invertStates') and self.obj_join.invertStates:
+                    # Fallback to saved state
+                    invert_y = self.obj_join.invertStates.get(key_str, False)
+                invert_states[interaction_key] = invert_y
+                
+                # Generate cross parts for just these two parts
+                parts_list = [cp_part1, cp_part2]
+                computed_parts = make_cross_parts(parts_list, dry_run=False, invert_states=invert_states)
+                
+                # Create temporary objects in the document
+                for part in computed_parts:
+                    temp_obj = self.active_document.addObject("Part::Feature", "temp_" + part.get_new_name())
+                    temp_obj.Shape = part.get_shape()
+                    temp_obj.ViewObject.show()
+                    self.live_preview_objects.append(temp_obj)
+                
+                self.active_document.recompute()
+                
+                # Select the temporary preview objects in 3D view
+                FreeCADGui.Selection.clearSelection()
+                for temp_obj in self.live_preview_objects:
+                    try:
+                        FreeCADGui.Selection.addSelection(temp_obj)
+                    except:
+                        pass
+                
+        except Exception as e:
+            FreeCAD.Console.PrintError("Error creating temporary preview: %s\n" % str(e))
+            # Restore original parts on error
+            if hasattr(self.obj_join, 'fromParts'):
+                for obj in self.obj_join.fromParts:
+                    try:
+                        obj.ViewObject.show()
+                    except:
+                        pass
+    
     def on_interaction_selected(self):
-        """Handle interaction selection to highlight parts in 3D view"""
+        """Handle interaction selection to show temporary crosspiece preview"""
         if not hasattr(self, 'interactions_list_widget') or not self.interactions_list_widget:
             return
         selected_ranges = self.interactions_list_widget.selectedRanges()
@@ -483,6 +647,8 @@ class CrossPiece(TreePanel):
         FreeCADGui.Selection.clearSelection()
         
         if len(selected_ranges) == 0:
+            # Deselection: clear temporary preview and restore original parts
+            self.clear_live_preview()
             self.selected_interaction = None
             return
         
@@ -498,16 +664,23 @@ class CrossPiece(TreePanel):
         
         if interaction:
             self.selected_interaction = interaction
-            # Highlight the two parts
-            try:
-                part1_obj = self.active_document.getObject(interaction['part1_name'])
-                part2_obj = self.active_document.getObject(interaction['part2_name'])
-                if part1_obj:
-                    FreeCADGui.Selection.addSelection(part1_obj)
-                if part2_obj:
-                    FreeCADGui.Selection.addSelection(part2_obj)
-            except Exception as e:
-                FreeCAD.Console.PrintError("Error highlighting parts: %s\n" % str(e))
+            self.generate_live_preview(interaction)
+    
+    def on_invert_changed(self, interaction_key, state):
+        """Called when an invert checkbox is changed - update state and regenerate preview if needed"""
+        # Save the state immediately
+        key_str = "%s|%s" % (interaction_key[0], interaction_key[1])
+        if not hasattr(self.obj_join, 'invertStates'):
+            self.obj_join.invertStates = {}
+        self.obj_join.invertStates[key_str] = (state == QtCore.Qt.Checked)
+        
+        # If this interaction is currently selected, regenerate the preview
+        if hasattr(self, 'selected_interaction') and self.selected_interaction:
+            current_key = (self.selected_interaction['part1_name'], self.selected_interaction['part2_name'])
+            if current_key == interaction_key:
+                # Clear and regenerate preview with new invert state
+                self.clear_live_preview()
+                self.generate_live_preview(self.selected_interaction)
     
     def save_invert_states(self):
         """Save the current state of all invert checkboxes to obj_join.invertStates"""

@@ -331,8 +331,6 @@ def make_cross_parts(parts, dry_run=False, invert_states=None):
     """
     if invert_states is None:
         invert_states = {}
-
-    FreeCAD.Console.PrintMessage("make_cross_parts - invert_states received: %s\n" % str(invert_states))
     
     part_elements_list = [helper.MaterialElement(part) for part in parts]
     interactions = []
@@ -374,12 +372,6 @@ def make_cross_parts(parts, dry_run=False, invert_states=None):
             
             interaction_key = (part1.get_name(), part2.get_name())
             invert_y = invert_states.get(interaction_key, False)
-            # Log l'interaction des parts
-            FreeCAD.Console.PrintMessage("Interaction key: %s, invert_y from dict: %s\n" % (str(interaction_key), invert_y))
-            if interaction_key in invert_states:
-                FreeCAD.Console.PrintMessage("  -> Key found in invert_states!\n")
-            else:
-                FreeCAD.Console.PrintMessage("  -> Key NOT found in invert_states. Available keys: %s\n" % str(list(invert_states.keys())))
             
             #print "face1_in_shape1: " + str(face1_in_shape1) + " face2_in_shape1:" + str(face2_in_shape1) + " face1_in_shape2: " + str(face1_in_shape2) + " face2_in_shape2:" + str(face2_in_shape2)
             if not face1_in_shape1 and not face2_in_shape1 \
