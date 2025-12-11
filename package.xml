@@ -2,8 +2,8 @@
 <package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
   <name>LCInterlocking</name>
   <description>Create interlocking parts for laser cutting or CNC milling</description>
-  <version>1.5.1</version>
-  <date>2025-11-25</date>
+  <version>1.5.2</version>
+  <date>2025-12-11</date>
   <maintainer>execuc</maintainer>
   <author>execuc</author>
   <license file="LICENSE">LGPL-2.1-or-later</license>

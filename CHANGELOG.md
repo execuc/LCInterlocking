@@ -2,10 +2,14 @@
 
 ## Release notes
 
-**v1.5.1:**
+**v1.5.2:**
  * Remove some QWidget warnings.
  * Prevent creation of impossible living hinges.
- * Handle more cases for cross part.
+ * Cross part:
+     * Handle more cross section cases.
+     * Add interaction view and possibility to invert the direction.
+     * Live preview for current selected interaction.
+ 
 
 **v1.4.0:**
  * Fix for FreeCAD 0.19.
