@@ -267,6 +267,7 @@ class CrossPiece(TreePanel):
         # Deselect interactions when tree selection changes
         # Block signals to prevent recursive calls
         if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
+            self.save_invert_states()
             self.interactions_list_widget.blockSignals(True)
             self.interactions_list_widget.clearSelection()
             self.interactions_list_widget.blockSignals(False)
@@ -301,6 +302,8 @@ class CrossPiece(TreePanel):
         # tree
         self.selection_model = self.tree_view_widget.selectionModel()
         self.selection_model.selectionChanged.connect(self.selection_changed)
+        # Center-align column headers in tree view
+        self.tree_view_widget.header().setDefaultAlignment(QtCore.Qt.AlignCenter)
         self.tree_vbox.addWidget(self.tree_view_widget)
         remove_item_button = QtGui.QPushButton('Remove item', self.tree_widget)
         remove_item_button.clicked.connect(self.remove_items)
@@ -314,12 +317,32 @@ class CrossPiece(TreePanel):
         line.setFrameShadow(QtGui.QFrame.Sunken)
         self.tree_vbox.addWidget(line)
         # Interactions section (after parameters)
-        interactions_label = QtGui.QLabel('Interactions:', self.tree_widget)
-        self.tree_vbox.addWidget(interactions_label)
-        self.interactions_list_widget = QtGui.QListWidget(self.tree_widget)
-        self.interactions_list_widget.setFixedHeight(150)
+        self.interactions_list_widget = QtGui.QTableWidget(self.tree_widget)
+        #self.interactions_list_widget.setFixedHeight(150)
         # Set selection mode to single selection (only one interaction can be selected at a time)
         self.interactions_list_widget.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.interactions_list_widget.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+        # Set column headers
+        self.interactions_list_widget.setColumnCount(2)
+        # Set header labels - use setHorizontalHeaderLabels which is more reliable
+        self.interactions_list_widget.setHorizontalHeaderLabels(['Interaction', 'Invert'])
+        # Style headers: center-aligned
+        header = self.interactions_list_widget.horizontalHeader()
+        header.setDefaultAlignment(QtCore.Qt.AlignCenter)
+        self.interactions_list_widget.horizontalHeader().setStretchLastSection(False)
+        # Use setSectionResizeMode instead of setResizeMode (newer PySide API)
+        try:
+            self.interactions_list_widget.horizontalHeader().setSectionResizeMode(0, QtGui.QHeaderView.Stretch)
+        except AttributeError:
+            # Fallback for older PySide versions
+            self.interactions_list_widget.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.Stretch)
+        self.interactions_list_widget.setColumnWidth(1, 80)
+        # Make sure headers are visible
+        self.interactions_list_widget.horizontalHeader().setVisible(True)
+        # Style the table to match the parts list appearance
+        self.interactions_list_widget.setAlternatingRowColors(False)
+        self.interactions_list_widget.setShowGrid(False)  # No grid lines between rows
+        self.interactions_list_widget.verticalHeader().setVisible(False)
         self.interactions_list_widget.itemSelectionChanged.connect(self.on_interaction_selected)
         self.tree_vbox.addWidget(self.interactions_list_widget)
         
@@ -351,7 +374,8 @@ class CrossPiece(TreePanel):
         if len(parts) < 2:
             self.interactions = []
             if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
-                self.interactions_list_widget.clear()
+                # self.interactions_list_widget.clear()
+                self.interactions_list_widget.setRowCount(0)
             if hasattr(self, 'interaction_checkboxes'):
                 self.interaction_checkboxes.clear()
             return
@@ -362,29 +386,53 @@ class CrossPiece(TreePanel):
             
             # Update UI
             if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
-                self.interactions_list_widget.clear()
+                self.interactions_list_widget.setRowCount(0)
             if hasattr(self, 'interaction_checkboxes'):
                 self.interaction_checkboxes.clear()
             
             for interaction in interactions:
                 interaction_key = (interaction['part1_name'], interaction['part2_name'])
                 
-                # Create display text
-                display_text = interaction['display_name']
+                # Get labels for both parts
+                part1_label = interaction['part1_name']
+                part2_label = interaction['part2_name']
+                try:
+                    part1_obj, _ = self.partsList.get(interaction['part1_name'])
+                    if part1_obj:
+                        part1_label = part1_obj.label
+                except:
+                    pass
+                try:
+                    part2_obj, _ = self.partsList.get(interaction['part2_name'])
+                    if part2_obj:
+                        part2_label = part2_obj.label
+                except:
+                    pass
+                
+                # Create interaction display text: "Name1 (label1) -> Name2 (label2)"
+                interaction_text = "%s (%s) -> %s (%s)" % (
+                    interaction['part1_name'], part1_label,
+                    interaction['part2_name'], part2_label
+                )
+                
+                # Add error indicator if needed
                 if interaction['type'] == 'error' or interaction['type'] == 'not_managed':
-                    display_text += " [ERROR: " + interaction.get('error', 'Unknown error') + "]"
+                    error_text = " [ERROR: " + interaction.get('error', 'Unknown error') + "]"
+                    interaction_text += error_text
                 
-                # Create item widget with label and optional checkbox
-                item_widget = QtGui.QWidget()
-                item_layout = QtGui.QHBoxLayout(item_widget)
-                item_layout.setContentsMargins(4, 2, 4, 2)
+                # Add row to table
+                row = self.interactions_list_widget.rowCount()
+                self.interactions_list_widget.insertRow(row)
                 
-                label = QtGui.QLabel(display_text)
-                item_layout.addWidget(label)
+                # Column 0: Interaction text
+                interaction_item = QtGui.QTableWidgetItem(interaction_text)
+                interaction_item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+                interaction_item.setData(QtCore.Qt.UserRole, interaction)
+                self.interactions_list_widget.setItem(row, 0, interaction_item)
                 
-                # Add checkbox for parametrable interactions
+                # Column 1: Invert checkbox (if parametrable) or empty
                 if interaction.get('parametrable', False):
-                    checkbox = QtGui.QCheckBox("Invert", self.tree_widget)
+                    checkbox = QtGui.QCheckBox("", self.tree_widget)  # No text, just checkbox
                     # Get the actual state from invertStates (may differ from interaction['invert_y'])
                     key_str = "%s|%s" % (interaction_key[0], interaction_key[1])
                     actual_state = False
@@ -396,21 +444,23 @@ class CrossPiece(TreePanel):
                     # Set initial state (no signal connection - state will be saved on OK/Preview/Add/Remove)
                     checkbox.setChecked(actual_state)
                     self.interaction_checkboxes[interaction_key] = checkbox
-                    item_layout.addWidget(checkbox)
-                
-                item_layout.addStretch()
-                
-                item = QtGui.QListWidgetItem()
-                item.setData(QtCore.Qt.UserRole, interaction)
-                item.setSizeHint(item_widget.sizeHint())
-                if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
-                    self.interactions_list_widget.addItem(item)
-                    self.interactions_list_widget.setItemWidget(item, item_widget)
+                    # Center the checkbox in the cell
+                    checkbox_widget = QtGui.QWidget()
+                    checkbox_layout = QtGui.QHBoxLayout(checkbox_widget)
+                    checkbox_layout.setAlignment(QtCore.Qt.AlignCenter)
+                    checkbox_layout.setContentsMargins(0, 0, 0, 0)
+                    checkbox_layout.addWidget(checkbox)
+                    self.interactions_list_widget.setCellWidget(row, 1, checkbox_widget)
+                else:
+                    # Empty cell for non-parametrable interactions
+                    empty_item = QtGui.QTableWidgetItem("")
+                    empty_item.setFlags(QtCore.Qt.NoItemFlags)
+                    self.interactions_list_widget.setItem(row, 1, empty_item)
         except Exception as e:
             FreeCAD.Console.PrintError("Error calculating interactions: %s\n" % str(e))
             self.interactions = []
             if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
-                self.interactions_list_widget.clear()
+                self.interactions_list_widget.setRowCount(0)
             if hasattr(self, 'interaction_checkboxes'):
                 self.interaction_checkboxes.clear()
     
@@ -418,26 +468,32 @@ class CrossPiece(TreePanel):
         """Handle interaction selection to highlight parts in 3D view"""
         if not hasattr(self, 'interactions_list_widget') or not self.interactions_list_widget:
             return
-        selected_items = self.interactions_list_widget.selectedItems()
+        selected_ranges = self.interactions_list_widget.selectedRanges()
         
         # Deselect tree view when interaction is selected
         # Block signals to prevent recursive calls
-        if len(selected_items) > 0:
+        if len(selected_ranges) > 0:
             if hasattr(self, 'selection_model') and self.selection_model:
                 # clearSelection() deselects all items in the tree view (parts list)
                 self.selection_model.blockSignals(True)
                 self.selection_model.clearSelection()
                 self.selection_model.blockSignals(False)
                 self.clear_parameter_widgets()
-                
         
         FreeCADGui.Selection.clearSelection()
         
-        if len(selected_items) == 0:
+        if len(selected_ranges) == 0:
             self.selected_interaction = None
             return
         
-        item = selected_items[0]
+        # Get the first selected row
+        selected_row = selected_ranges[0].topRow()
+        # Get interaction data from first column (Name 1)
+        item = self.interactions_list_widget.item(selected_row, 0)
+        if item is None:
+            self.selected_interaction = None
+            return
+        
         interaction = item.data(QtCore.Qt.UserRole)
         
         if interaction:

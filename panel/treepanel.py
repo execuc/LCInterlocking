@@ -80,6 +80,10 @@ class TreePanel(object):
         self.tree_view_widget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.tree_view_widget.setModel(self.model)
         self.tree_view_widget.setFixedHeight(250)
+        header = self.tree_view_widget.header()
+        header.setSectionResizeMode(QtGui.QHeaderView.Stretch)
+        header.setDefaultAlignment(QtCore.Qt.AlignCenter)
+
         self.selection_model = None
         self.tab_type_box = None
         self.edited_items = []
