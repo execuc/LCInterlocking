@@ -3,6 +3,8 @@ Crosspiece
 
 This tool allow to create slot on parts in order to fit together.
 
+!NEW: Added interactions view with live preview and invert cut direction configuration.
+
 Procedure
 -----------
  * Select all the involved part and click on "Add same parts" if they share the same material properties, else click on "Add parts"
@@ -16,5 +18,6 @@ Procedure
   * Crosspiece properties can be edited again clicking on "Crosspiece" group item.
   * In editing mode, parts can be visualized by selecting the treview of the tools. Then they can be displayed/hidden by tapping in the key "space".
   * Preview button allows to create a new document with crosspiece parts without exiting tool. It's convenient to adjust connection parameters.
+  * In interactions table, selecting an interaction shows a live preview of the crosspiece result for those two parts. The "Invert" checkbox allows to reverse the cut direction for aligned same-height interactions.
 
   
