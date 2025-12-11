@@ -316,8 +316,26 @@ def remove_intersections(first_part, second_part, referential_faces, axis, inver
 # X is the width of part 2.
 # Y is the width of part 1.
 # Z is the height of the intersection
-def make_cross_parts(parts):
+def make_cross_parts(parts, dry_run=False, invert_states=None):
+    """
+    Make cross parts from a list of parts.
+    
+    Args:
+        parts: List of parts to process
+        dry_run: If True, only detect interactions without modifying parts
+        invert_states: Dictionary mapping interaction keys to invert_y state
+    
+    Returns:
+        If dry_run is True: (part_elements_list, interactions_list)
+        Otherwise: part_elements_list
+    """
+    if invert_states is None:
+        invert_states = {}
+
+    FreeCAD.Console.PrintMessage("make_cross_parts - invert_states received: %s\n" % str(invert_states))
+    
     part_elements_list = [helper.MaterialElement(part) for part in parts]
+    interactions = []
 
     for part1, part2 in itertools.combinations(part_elements_list, 2):
         shape1 = part1.properties.freecad_object.Shape
@@ -328,7 +346,21 @@ def make_cross_parts(parts):
             sorted_areas_by_normals = helper.sort_area_shape_faces(intersect_shape)
             str_parts_name = part1.get_name() + " -> " + part2.get_name()
             if len(sorted_areas_by_normals) != 3:
-                raise ValueError(str_parts_name + " : intersection is not rectangular box")
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'error',
+                    'error': str_parts_name + " : intersection is not rectangular box",
+                    'invertible': False,
+                    'invert_y': False,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    raise ValueError(str_parts_name + " : intersection is not rectangular box")
+                continue
+            
             smallest_area = sorted_areas_by_normals[0]
             referential_faces = smallest_area.faces_sorted_descending
             face1 = referential_faces[0]
@@ -339,47 +371,172 @@ def make_cross_parts(parts):
             face2_in_shape1 = is_inside(face2, shape1)
             face1_in_shape2 = is_inside(face1, shape2)
             face2_in_shape2 = is_inside(face2, shape2)
+            
+            interaction_key = (part1.get_name(), part2.get_name())
+            invert_y = invert_states.get(interaction_key, False)
+            # Log l'interaction des parts
+            FreeCAD.Console.PrintMessage("Interaction key: %s, invert_y from dict: %s\n" % (str(interaction_key), invert_y))
+            if interaction_key in invert_states:
+                FreeCAD.Console.PrintMessage("  -> Key found in invert_states!\n")
+            else:
+                FreeCAD.Console.PrintMessage("  -> Key NOT found in invert_states. Available keys: %s\n" % str(list(invert_states.keys())))
+            
             #print "face1_in_shape1: " + str(face1_in_shape1) + " face2_in_shape1:" + str(face2_in_shape1) + " face1_in_shape2: " + str(face1_in_shape2) + " face2_in_shape2:" + str(face2_in_shape2)
             if not face1_in_shape1 and not face2_in_shape1 \
                     and face1_in_shape2 and face2_in_shape2:
-                raise ValueError(str_parts_name + " : a part is included in the other.")
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'error',
+                    'error': str_parts_name + " : a part is included in the other.",
+                    'invertible': False,
+                    'invert_y': False,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    raise ValueError(str_parts_name + " : a part is included in the other.")
             elif face1_in_shape1 and face2_in_shape1 \
                     and not face1_in_shape2 and not face2_in_shape2:
-                raise ValueError(str_parts_name + " : a part is included in the other.")
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'error',
+                    'error': str_parts_name + " : a part is included in the other.",
+                    'invertible': False,
+                    'invert_y': False,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    raise ValueError(str_parts_name + " : a part is included in the other.")
             # Case where both parts fit together (same height and aligned)
             # TODO: Need a way to determine in which way the pieces will fit together,
             #       is part1 will be inserted into part2 or part2 will be inserted into part1?
             elif not face1_in_shape1 and not face2_in_shape1 \
                     and not face1_in_shape2 and not face2_in_shape2:
                 #print str_parts_name + " : same height parts"
-                remove_intersections(part1, part2, referential_faces, axis)
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'same_height_aligned',
+                    'invertible': True,
+                    'invert_y': invert_y,
+                    'parametrable': True
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    remove_intersections(part1, part2, referential_faces, axis, invert_y)
             # Case where part1 is above part2
             elif not face1_in_shape1 and face2_in_shape1 \
                     and face1_in_shape2 and not face2_in_shape2:
                 #print str_parts_name + " : a part is above the other (1)"
-                remove_intersections(part1, part2, referential_faces, axis)
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'part1_above_part2',
+                    'invertible': False,
+                    'invert_y': False,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    remove_intersections(part1, part2, referential_faces, axis, False)
             # Case where part2 is above part1
             elif face1_in_shape1 and not face2_in_shape1 \
                     and not face1_in_shape2 and face2_in_shape2:
                 #print str_parts_name + " : a part is above the other (2)"
-                remove_intersections(part1, part2, referential_faces, axis, True)
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'part2_above_part1',
+                    'invertible': False,
+                    'invert_y': True,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    remove_intersections(part1, part2, referential_faces, axis, True)
             # Case where face2 is common base and part2 is higher
             elif not face1_in_shape1 and not face2_in_shape1 \
                     and face1_in_shape2 and not face2_in_shape2:
-                remove_intersections(part1, part2, referential_faces, axis)
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'face2_common_base_part2_higher',
+                    'invertible': False,
+                    'invert_y': False,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    remove_intersections(part1, part2, referential_faces, axis, False)
             # Case where face2 is common base and part1 is higher
             elif face1_in_shape1 and not face2_in_shape1 \
                     and not face1_in_shape2 and not face2_in_shape2:
-                remove_intersections(part1, part2, referential_faces, axis, True)
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'face2_common_base_part1_higher',
+                    'invertible': False,
+                    'invert_y': True,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    remove_intersections(part1, part2, referential_faces, axis, True)
             # Case where face1 is common base and part1 is higher
             elif not face1_in_shape1 and face2_in_shape1 \
                     and not face1_in_shape2 and not face2_in_shape2:
-                remove_intersections(part1, part2, referential_faces, axis)
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'face1_common_base_part1_higher',
+                    'invertible': False,
+                    'invert_y': False,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    remove_intersections(part1, part2, referential_faces, axis, False)
             # Case where face1 is common and part2 is higher
             elif not face1_in_shape1 and not face2_in_shape1 \
                     and not face1_in_shape2 and face2_in_shape2:
-                remove_intersections(part1, part2, referential_faces, axis, True)
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'face1_common_base_part2_higher',
+                    'invertible': False,
+                    'invert_y': True,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    remove_intersections(part1, part2, referential_faces, axis, True)
             else:
-                raise ValueError("Not managed")
+                interaction = {
+                    'part1_name': part1.get_name(),
+                    'part2_name': part2.get_name(),
+                    'display_name': str_parts_name,
+                    'type': 'not_managed',
+                    'error': 'Not managed',
+                    'invertible': False,
+                    'invert_y': False,
+                    'parametrable': False
+                }
+                interactions.append(interaction)
+                if not dry_run:
+                    raise ValueError("Not managed")
 
+    if dry_run:
+        return part_elements_list, interactions
     return part_elements_list

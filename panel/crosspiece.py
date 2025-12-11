@@ -22,6 +22,7 @@
 # *                                                                         *
 # ***************************************************************************
 
+
 import FreeCAD
 import FreeCADGui
 from FreeCAD import Gui, Matrix
@@ -46,6 +47,7 @@ class CrossPieceGroup:
         obj.addProperty('App::PropertyLinkList', 'fromParts').fromParts = []
         obj.addProperty('App::PropertyPythonObject', 'edit').edit = False
         obj.addProperty('App::PropertyPythonObject', 'namesMapping').namesMapping = {}
+        obj.addProperty('App::PropertyPythonObject', 'invertStates').invertStates = {}
         obj.Proxy = self
 
     def onChanged(self, fp, prop):
@@ -96,7 +98,16 @@ class CrossPieceGroup:
                 cp_part.recomputeInit(freecad_obj)
                 parts.append(cp_part)
 
-            computed_parts = make_cross_parts(parts)
+            # Convert string keys to tuples for make_cross_parts
+            invert_states = {}
+            if hasattr(fp, 'invertStates') and fp.invertStates:
+                for key, value in fp.invertStates.items():
+                    if isinstance(key, str) and '|' in key:
+                        part1_name, part2_name = key.split('|', 1)
+                        invert_states[(part1_name, part2_name)] = value
+                    elif isinstance(key, tuple):
+                        invert_states[key] = value
+            computed_parts = make_cross_parts(parts, dry_run=False, invert_states=invert_states)
             for part in computed_parts:
                 new_shape = preview_doc.addObject("Part::Feature", part.get_new_name())
                 new_shape.Shape = part.get_shape()
@@ -132,7 +143,16 @@ class CrossPieceGroup:
                 parts.append(cp_part)
 
             fp.fromParts = freedac_origin_obj
-            computed_parts = make_cross_parts(parts)
+            # Convert string keys to tuples for make_cross_parts
+            invert_states = {}
+            if hasattr(fp, 'invertStates') and fp.invertStates:
+                for key, value in fp.invertStates.items():
+                    if isinstance(key, str) and '|' in key:
+                        part1_name, part2_name = key.split('|', 1)
+                        invert_states[(part1_name, part2_name)] = value
+                    elif isinstance(key, tuple):
+                        invert_states[key] = value
+            computed_parts = make_cross_parts(parts, dry_run=False, invert_states=invert_states)
 
             previous_nameMapping = copy.copy(fp.namesMapping)
             fp.namesMapping.clear()
@@ -206,6 +226,12 @@ class CrossPieceViewProvider:
 
 class CrossPiece(TreePanel):
     def __init__(self, obj_join):
+        # Initialize attributes before super().__init__() because init_tree_widget is called during parent init
+        self.interactions = []
+        self.interactions_list_widget = None
+        self.interaction_checkboxes = {}  # Store checkboxes by interaction key
+        self.selected_interaction = None
+        
         super(CrossPiece, self).__init__("Crosspiece", obj_join)
         self.obj_join = obj_join
         self.parts_origin = copy.deepcopy(obj_join.parts)
@@ -225,6 +251,7 @@ class CrossPiece(TreePanel):
     def compute(self, preview):
         self.save_items_properties()
         self.save_link_properties()
+        self.save_invert_states()  # Save invert checkbox states
         if not preview:
             self.obj_join.need_recompute = True
         else:
@@ -234,6 +261,18 @@ class CrossPiece(TreePanel):
         self.compute(True)
         self.selection_changed(None, None)
         return
+    
+    def selection_changed(self, selected, deselected):
+        """Override to deselect interactions when tree selection changes"""
+        # Deselect interactions when tree selection changes
+        # Block signals to prevent recursive calls
+        if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
+            self.interactions_list_widget.blockSignals(True)
+            self.interactions_list_widget.clearSelection()
+            self.interactions_list_widget.blockSignals(False)
+        
+        # Call parent method
+        super(CrossPiece, self).selection_changed(selected, deselected)
 
     def init_tree_widget(self):
         #Preview button
@@ -266,9 +305,185 @@ class CrossPiece(TreePanel):
         remove_item_button = QtGui.QPushButton('Remove item', self.tree_widget)
         remove_item_button.clicked.connect(self.remove_items)
         self.tree_vbox.addWidget(remove_item_button)
-        # test layout
+        # Parameters layout (where part properties are displayed)
         self.edit_items_layout = QtGui.QVBoxLayout()
         self.tree_vbox.addLayout(self.edit_items_layout)
+        # Separator line before interactions
+        line = QtGui.QFrame(self.tree_widget)
+        line.setFrameShape(QtGui.QFrame.HLine)
+        line.setFrameShadow(QtGui.QFrame.Sunken)
+        self.tree_vbox.addWidget(line)
+        # Interactions section (after parameters)
+        interactions_label = QtGui.QLabel('Interactions:', self.tree_widget)
+        self.tree_vbox.addWidget(interactions_label)
+        self.interactions_list_widget = QtGui.QListWidget(self.tree_widget)
+        self.interactions_list_widget.setFixedHeight(150)
+        # Set selection mode to single selection (only one interaction can be selected at a time)
+        self.interactions_list_widget.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.interactions_list_widget.itemSelectionChanged.connect(self.on_interaction_selected)
+        self.tree_vbox.addWidget(self.interactions_list_widget)
+        
+        # Calculate initial interactions
+        self.update_interactions()
+    
+    def update_interactions(self):
+        """Calculate and display interactions between parts"""
+        # Get invert states from obj_join and convert string keys to tuples
+        invert_states = {}
+        if hasattr(self.obj_join, 'invertStates') and self.obj_join.invertStates:
+            for key, value in self.obj_join.invertStates.items():
+                if isinstance(key, str) and '|' in key:
+                    part1_name, part2_name = key.split('|', 1)
+                    invert_states[(part1_name, part2_name)] = value
+                elif isinstance(key, tuple):
+                    invert_states[key] = value
+        
+        # Calculate interactions
+        parts = []
+        for part in self.obj_join.parts.lst:
+            cp_part = copy.deepcopy(part)
+            freecad_obj = self.active_document.getObject(cp_part.name)
+            if freecad_obj is None:
+                continue
+            cp_part.recomputeInit(freecad_obj)
+            parts.append(cp_part)
+        
+        if len(parts) < 2:
+            self.interactions = []
+            if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
+                self.interactions_list_widget.clear()
+            if hasattr(self, 'interaction_checkboxes'):
+                self.interaction_checkboxes.clear()
+            return
+        
+        try:
+            _, interactions = make_cross_parts(parts, dry_run=True, invert_states=invert_states)
+            self.interactions = interactions
+            
+            # Update UI
+            if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
+                self.interactions_list_widget.clear()
+            if hasattr(self, 'interaction_checkboxes'):
+                self.interaction_checkboxes.clear()
+            
+            for interaction in interactions:
+                interaction_key = (interaction['part1_name'], interaction['part2_name'])
+                
+                # Create display text
+                display_text = interaction['display_name']
+                if interaction['type'] == 'error' or interaction['type'] == 'not_managed':
+                    display_text += " [ERROR: " + interaction.get('error', 'Unknown error') + "]"
+                
+                # Create item widget with label and optional checkbox
+                item_widget = QtGui.QWidget()
+                item_layout = QtGui.QHBoxLayout(item_widget)
+                item_layout.setContentsMargins(4, 2, 4, 2)
+                
+                label = QtGui.QLabel(display_text)
+                item_layout.addWidget(label)
+                
+                # Add checkbox for parametrable interactions
+                if interaction.get('parametrable', False):
+                    checkbox = QtGui.QCheckBox("Invert", self.tree_widget)
+                    # Get the actual state from invertStates (may differ from interaction['invert_y'])
+                    key_str = "%s|%s" % (interaction_key[0], interaction_key[1])
+                    actual_state = False
+                    if hasattr(self.obj_join, 'invertStates') and self.obj_join.invertStates:
+                        actual_state = self.obj_join.invertStates.get(key_str, interaction['invert_y'])
+                    else:
+                        actual_state = interaction['invert_y']
+                    
+                    # Set initial state (no signal connection - state will be saved on OK/Preview/Add/Remove)
+                    checkbox.setChecked(actual_state)
+                    self.interaction_checkboxes[interaction_key] = checkbox
+                    item_layout.addWidget(checkbox)
+                
+                item_layout.addStretch()
+                
+                item = QtGui.QListWidgetItem()
+                item.setData(QtCore.Qt.UserRole, interaction)
+                item.setSizeHint(item_widget.sizeHint())
+                if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
+                    self.interactions_list_widget.addItem(item)
+                    self.interactions_list_widget.setItemWidget(item, item_widget)
+        except Exception as e:
+            FreeCAD.Console.PrintError("Error calculating interactions: %s\n" % str(e))
+            self.interactions = []
+            if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
+                self.interactions_list_widget.clear()
+            if hasattr(self, 'interaction_checkboxes'):
+                self.interaction_checkboxes.clear()
+    
+    def on_interaction_selected(self):
+        """Handle interaction selection to highlight parts in 3D view"""
+        if not hasattr(self, 'interactions_list_widget') or not self.interactions_list_widget:
+            return
+        selected_items = self.interactions_list_widget.selectedItems()
+        
+        # Deselect tree view when interaction is selected
+        # Block signals to prevent recursive calls
+        if len(selected_items) > 0:
+            if hasattr(self, 'selection_model') and self.selection_model:
+                # clearSelection() deselects all items in the tree view (parts list)
+                self.selection_model.blockSignals(True)
+                self.selection_model.clearSelection()
+                self.selection_model.blockSignals(False)
+                self.clear_parameter_widgets()
+                
+        
+        FreeCADGui.Selection.clearSelection()
+        
+        if len(selected_items) == 0:
+            self.selected_interaction = None
+            return
+        
+        item = selected_items[0]
+        interaction = item.data(QtCore.Qt.UserRole)
+        
+        if interaction:
+            self.selected_interaction = interaction
+            # Highlight the two parts
+            try:
+                part1_obj = self.active_document.getObject(interaction['part1_name'])
+                part2_obj = self.active_document.getObject(interaction['part2_name'])
+                if part1_obj:
+                    FreeCADGui.Selection.addSelection(part1_obj)
+                if part2_obj:
+                    FreeCADGui.Selection.addSelection(part2_obj)
+            except Exception as e:
+                FreeCAD.Console.PrintError("Error highlighting parts: %s\n" % str(e))
+    
+    def save_invert_states(self):
+        """Save the current state of all invert checkboxes to obj_join.invertStates"""
+        if not hasattr(self.obj_join, 'invertStates'):
+            self.obj_join.invertStates = {}
+        
+        # Save all checkbox states
+        for interaction_key, checkbox in self.interaction_checkboxes.items():
+            checked = checkbox.isChecked()
+            # Convert tuple key to string for FreeCAD property storage
+            key_str = "%s|%s" % (interaction_key[0], interaction_key[1])
+            self.obj_join.invertStates[key_str] = checked
+    
+    def add_parts(self):
+        """Override to recalculate interactions after adding parts"""
+        self.save_invert_states()  # Save invert checkbox states before updating
+        super(CrossPiece, self).add_parts()
+        self.update_interactions()
+    
+    def add_same_parts(self):
+        """Override to recalculate interactions after adding same parts"""
+        self.save_invert_states()  # Save invert checkbox states before updating
+        super(CrossPiece, self).add_same_parts()
+        self.update_interactions()
+    
+    def remove_items(self):
+        """Override to recalculate interactions after removing items"""
+        self.save_invert_states()  # Save invert checkbox states before updating
+        result = super(CrossPiece, self).remove_items()
+        if result is not False:
+            self.update_interactions()
+        return result
 
 class CrossPieceCommand:
 

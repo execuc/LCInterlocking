@@ -26,6 +26,18 @@ from PySide import QtCore, QtGui
 from lasercut import helper
 import FreeCAD
 
+class NoWheelSpinBox(QtGui.QDoubleSpinBox):
+    """SpinBox that ignores wheel events completely"""
+    def wheelEvent(self, event):
+        # Completely ignore wheel events
+        event.ignore()
+
+class NoWheelComboBox(QtGui.QComboBox):
+    """ComboBox that ignores wheel events completely"""
+    def wheelEvent(self, event):
+        # Completely ignore wheel events
+        event.ignore()
+
 class WidgetValue(helper.ObjectProperties):
 
     _allowed = ('widget', 'show_name', 'name', 'type', 'interval_value', 'decimals', 'step',
@@ -63,7 +75,7 @@ class ParamWidget(object):
             widget_config.widget = QtGui.QLabel(self.form)
             widget_config.widget.setText("%f" % self.get_property_value(widget_config.name))
         elif widget_config.type == float:
-            widget_config.widget = QtGui.QDoubleSpinBox(self.form)
+            widget_config.widget = NoWheelSpinBox(self.form)
             widget_config.widget.setDecimals(widget_config.decimals)
             widget_config.widget.setSingleStep(widget_config.step)
             widget_config.widget.setMinimum(widget_config.interval_value[0])
@@ -74,7 +86,7 @@ class ParamWidget(object):
             state = QtCore.Qt.Checked if self.get_property_value(widget_config.name) == True else QtCore.Qt.Unchecked
             widget_config.widget.setCheckState(state)
         elif widget_config.type == list:
-            widget_config.widget = QtGui.QComboBox(self.form)
+            widget_config.widget = NoWheelComboBox(self.form)
             widget_config.widget.addItems(widget_config.interval_value)
             default_value_index = 0
             for str_value in widget_config.interval_value:

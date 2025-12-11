@@ -176,6 +176,8 @@ class PartsList(object):
                 new_part.new_name = part.new_name
                 new_part.name = part.name
                 new_part.link_name = part.link_name
+                # Preserve the original label of the linked part (its own label)
+                new_part.label = part.label
 
                 part_properties.append(new_part)
             else:

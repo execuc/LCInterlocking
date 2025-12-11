@@ -91,6 +91,7 @@ class TreePanel(object):
         self.save_initial_objects()
 
         for item in self.parts:
+            # Each part displays its own label
             self.model.append_part(item.name, item.label, bool(item.link_name))
 
         for item in self.faces:
@@ -175,6 +176,7 @@ class TreePanel(object):
         for part in parts:
             try:
                 item = self.partsList.append(part)
+                # Each part displays its own label
                 last_index = self.model.append_part(item.name, item.label)
             except ValueError as e:
                 FreeCAD.Console.PrintError(e)
@@ -192,6 +194,7 @@ class TreePanel(object):
             index = self.model.append_part(item.name, item.label)
             for part in freecad_parts[1:]:
                 sub_item = self.partsList.append_link(part, freecad_parts[0])
+                # Each part displays its own label
                 self.model.append_part(sub_item.name, sub_item.label, True)
         except ValueError as e:
             FreeCAD.Console.PrintError(e)
@@ -285,11 +288,15 @@ class TreePanel(object):
         self.selection_model.clearSelection()
         self.selection_model.select(index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
-    def selection_changed(self, selected, deselected):
-        FreeCADGui.Selection.clearSelection()
+    def clear_parameter_widgets(self):
+        """Clear parameter widgets and save their properties"""
         self.save_items_properties()
         self.edited_items = []
         self.remove_items_widgets()
+
+    def selection_changed(self, selected, deselected):
+        FreeCADGui.Selection.clearSelection()
+        self.clear_parameter_widgets()
         indexes = self.tree_view_widget.selectedIndexes()
         tab_indexes = []
         for index in indexes:
