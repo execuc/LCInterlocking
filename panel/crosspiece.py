@@ -49,6 +49,19 @@ class CrossPieceGroup:
         obj.addProperty('App::PropertyPythonObject', 'namesMapping').namesMapping = {}
         obj.addProperty('App::PropertyPythonObject', 'invertStates').invertStates = {}
         obj.Proxy = self
+    
+    def _convert_invert_states(self, invert_states_dict):
+        """Convert string keys to tuples for make_cross_parts"""
+        if not invert_states_dict:
+            return {}
+        result = {}
+        for key, value in invert_states_dict.items():
+            if isinstance(key, str) and '|' in key:
+                part1_name, part2_name = key.split('|', 1)
+                result[(part1_name, part2_name)] = value
+            elif isinstance(key, tuple):
+                result[key] = value
+        return result
 
     def onChanged(self, fp, prop):
         if prop == "need_recompute":
@@ -91,7 +104,6 @@ class CrossPieceGroup:
                 full_preview_doc = FreeCAD.newDocument(full_preview_doc_name)
 
             parts = []
-            tabs = []
             for part in fp.parts.lst:
                 cp_part = copy.deepcopy(part)
                 freecad_obj = document.getObject(cp_part.name)
@@ -99,14 +111,9 @@ class CrossPieceGroup:
                 parts.append(cp_part)
 
             # Convert string keys to tuples for make_cross_parts
-            invert_states = {}
-            if hasattr(fp, 'invertStates') and fp.invertStates:
-                for key, value in fp.invertStates.items():
-                    if isinstance(key, str) and '|' in key:
-                        part1_name, part2_name = key.split('|', 1)
-                        invert_states[(part1_name, part2_name)] = value
-                    elif isinstance(key, tuple):
-                        invert_states[key] = value
+            invert_states = self._convert_invert_states(
+                fp.invertStates if hasattr(fp, 'invertStates') and fp.invertStates else {}
+            )
             computed_parts = make_cross_parts(parts, dry_run=False, invert_states=invert_states)
             for part in computed_parts:
                 new_shape = full_preview_doc.addObject("Part::Feature", part.get_new_name())
@@ -144,14 +151,9 @@ class CrossPieceGroup:
 
             fp.fromParts = freedac_origin_obj
             # Convert string keys to tuples for make_cross_parts
-            invert_states = {}
-            if hasattr(fp, 'invertStates') and fp.invertStates:
-                for key, value in fp.invertStates.items():
-                    if isinstance(key, str) and '|' in key:
-                        part1_name, part2_name = key.split('|', 1)
-                        invert_states[(part1_name, part2_name)] = value
-                    elif isinstance(key, tuple):
-                        invert_states[key] = value
+            invert_states = self._convert_invert_states(
+                fp.invertStates if hasattr(fp, 'invertStates') and fp.invertStates else {}
+            )
             computed_parts = make_cross_parts(parts, dry_run=False, invert_states=invert_states)
 
             previous_nameMapping = copy.copy(fp.namesMapping)
@@ -271,17 +273,9 @@ class CrossPiece(TreePanel):
     
     def selection_changed(self, selected, deselected):
         """Override to deselect interactions when tree selection changes"""
-        # Only clear live preview if we actually have a selection in the tree (not just deselection)
-        # Check if there are selected items in the tree
-        indexes = self.tree_view_widget.selectedIndexes()
-        if len(indexes) == 0:
-            # No selection in tree - clear live preview and restore original parts
-            self.clear_live_preview()
-            self.selected_interaction = None
-        else:
-            # There is a selection in tree - clear live preview (interaction is being deselected)
-            self.clear_live_preview()
-            self.selected_interaction = None
+        # Clear live preview when selecting a part (deselecting interaction)
+        self.clear_live_preview()
+        self.selected_interaction = None
         
         # Deselect interactions when tree selection changes
         # Block signals to prevent recursive calls
@@ -299,13 +293,11 @@ class CrossPiece(TreePanel):
         v_box = QtGui.QVBoxLayout()
         preview_button = QtGui.QPushButton('Preview', self.tree_widget)
         preview_button.clicked.connect(self.full_preview)
-        #self.fast_preview = QtGui.QCheckBox("Fast preview", self.tree_widget)
         line = QtGui.QFrame(self.tree_widget)
         line.setFrameShape(QtGui.QFrame.HLine);
         line.setFrameShadow(QtGui.QFrame.Sunken);
         h_box = QtGui.QHBoxLayout()
         h_box.addWidget(preview_button)
-        #h_box.addWidget(self.fast_preview)
         v_box.addLayout(h_box)
         v_box.addWidget(line)
         self.tree_vbox.addLayout(v_box)
@@ -337,7 +329,6 @@ class CrossPiece(TreePanel):
         self.tree_vbox.addWidget(line)
         # Interactions section (after parameters)
         self.interactions_list_widget = QtGui.QTableWidget(self.tree_widget)
-        #self.interactions_list_widget.setFixedHeight(150)
         # Set selection mode to single selection (only one interaction can be selected at a time)
         self.interactions_list_widget.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
         self.interactions_list_widget.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
@@ -345,6 +336,7 @@ class CrossPiece(TreePanel):
         self.interactions_list_widget.setColumnCount(2)
         # Set header labels - use setHorizontalHeaderLabels which is more reliable
         self.interactions_list_widget.setHorizontalHeaderLabels(['Interaction', 'Invert'])
+        self.interactions_list_widget.setFixedHeight(250)
         # Style headers: center-aligned
         header = self.interactions_list_widget.horizontalHeader()
         header.setDefaultAlignment(QtCore.Qt.AlignCenter)
@@ -368,23 +360,49 @@ class CrossPiece(TreePanel):
         # Calculate initial interactions
         self.update_interactions()
     
+    def _convert_invert_states(self, invert_states_dict):
+        """Convert string keys to tuples for make_cross_parts"""
+        if not invert_states_dict:
+            return {}
+        result = {}
+        for key, value in invert_states_dict.items():
+            if isinstance(key, str) and '|' in key:
+                part1_name, part2_name = key.split('|', 1)
+                result[(part1_name, part2_name)] = value
+            elif isinstance(key, tuple):
+                result[key] = value
+        return result
+    
+    def _get_part_object(self, part_name):
+        """Helper to safely get a part object from document"""
+        try:
+            return self.active_document.getObject(part_name)
+        except:
+            return None
+    
+    def _show_all_parts(self):
+        """Show all parts from parts list"""
+        if hasattr(self.obj_join, 'parts'):
+            for part in self.obj_join.parts.lst:
+                part_obj = self._get_part_object(part.name)
+                if part_obj and hasattr(part_obj, 'ViewObject'):
+                    try:
+                        part_obj.ViewObject.show()
+                    except:
+                        pass
+    
     def update_interactions(self):
         """Calculate and display interactions between parts"""
         # Get invert states from obj_join and convert string keys to tuples
-        invert_states = {}
-        if hasattr(self.obj_join, 'invertStates') and self.obj_join.invertStates:
-            for key, value in self.obj_join.invertStates.items():
-                if isinstance(key, str) and '|' in key:
-                    part1_name, part2_name = key.split('|', 1)
-                    invert_states[(part1_name, part2_name)] = value
-                elif isinstance(key, tuple):
-                    invert_states[key] = value
+        invert_states = self._convert_invert_states(
+            self.obj_join.invertStates if hasattr(self.obj_join, 'invertStates') and self.obj_join.invertStates else {}
+        )
         
         # Calculate interactions
         parts = []
         for part in self.obj_join.parts.lst:
             cp_part = copy.deepcopy(part)
-            freecad_obj = self.active_document.getObject(cp_part.name)
+            freecad_obj = self._get_part_object(cp_part.name)
             if freecad_obj is None:
                 continue
             cp_part.recomputeInit(freecad_obj)
@@ -393,7 +411,6 @@ class CrossPiece(TreePanel):
         if len(parts) < 2:
             self.interactions = []
             if hasattr(self, 'interactions_list_widget') and self.interactions_list_widget:
-                # self.interactions_list_widget.clear()
                 self.interactions_list_widget.setRowCount(0)
             if hasattr(self, 'interaction_checkboxes'):
                 self.interaction_checkboxes.clear()
@@ -497,15 +514,7 @@ class CrossPiece(TreePanel):
                     pass
             self.live_preview_objects = []
         # Restore original parts visibility
-        # Restore all parts from document using part names
-        if hasattr(self.obj_join, 'parts'):
-            for part in self.obj_join.parts.lst:
-                try:
-                    part_obj = self.active_document.getObject(part.name)
-                    if part_obj and hasattr(part_obj, 'ViewObject'):
-                        part_obj.ViewObject.show()
-                except:
-                    pass
+        self._show_all_parts()
         
         # Also restore parts from fromParts
         if hasattr(self.obj_join, 'fromParts') and self.obj_join.fromParts:
@@ -533,35 +542,26 @@ class CrossPiece(TreePanel):
                 self.live_preview_objects = []
             
             # Restore visibility of ALL parts first (in case some were hidden from previous interaction)
-            if hasattr(self.obj_join, 'parts'):
-                for part in self.obj_join.parts.lst:
-                    try:
-                        part_obj = self.active_document.getObject(part.name)
-                        if part_obj and hasattr(part_obj, 'ViewObject'):
-                            part_obj.ViewObject.show()
-                    except:
-                        pass
+            self._show_all_parts()
             
             # Get the two parts for this interaction
             part1_name = interaction['part1_name']
             part2_name = interaction['part2_name']
             
             # Hide only the two parts involved in this interaction (not all parts)
-            # Hide part1
-            try:
-                part1_obj = self.active_document.getObject(part1_name)
-                if part1_obj and hasattr(part1_obj, 'ViewObject'):
+            part1_obj = self._get_part_object(part1_name)
+            if part1_obj and hasattr(part1_obj, 'ViewObject'):
+                try:
                     part1_obj.ViewObject.hide()
-            except:
-                pass
+                except:
+                    pass
             
-            # Hide part2
-            try:
-                part2_obj = self.active_document.getObject(part2_name)
-                if part2_obj and hasattr(part2_obj, 'ViewObject'):
+            part2_obj = self._get_part_object(part2_name)
+            if part2_obj and hasattr(part2_obj, 'ViewObject'):
+                try:
                     part2_obj.ViewObject.hide()
-            except:
-                pass
+                except:
+                    pass
             
             # Find the parts in the parts list
             part1 = None
@@ -576,8 +576,8 @@ class CrossPiece(TreePanel):
                 # Create deep copies and initialize
                 cp_part1 = copy.deepcopy(part1)
                 cp_part2 = copy.deepcopy(part2)
-                part1_obj = self.active_document.getObject(part1_name)
-                part2_obj = self.active_document.getObject(part2_name)
+                part1_obj = self._get_part_object(part1_name)
+                part2_obj = self._get_part_object(part2_name)
                 if part1_obj:
                     cp_part1.recomputeInit(part1_obj)
                 if part2_obj:
