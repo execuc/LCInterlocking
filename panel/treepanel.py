@@ -424,3 +424,38 @@ class TreePanel(object):
     def save_link_properties(self):
         self.partsList.get_parts_properties()
         self.tabsList.get_tabs_properties()
+
+
+class OriginalPartsGroup:
+    """Presentational-only folder: claims parts via its own link list, never App::DocumentObjectGroup's Group, so it never reparents them."""
+
+    def __init__(self, obj):
+        obj.addProperty('App::PropertyLinkList', 'parts').parts = []
+        obj.Proxy = self
+
+    def execute(self, fp):
+        pass
+
+
+class OriginalPartsGroupViewProvider:
+    def __init__(self, vobj):
+        vobj.Proxy = self
+
+    def attach(self, vobj):
+        self.ViewObject = vobj
+        self.Object = vobj.Object
+
+    def claimChildren(self):
+        return list(self.Object.parts)
+
+    def getIcon(self):
+        return ":/icons/Group.svg"
+
+    def onChanged(self, vp, prop):
+        pass
+
+    def __getstate__(self):
+        return None
+
+    def __setstate__(self, state):
+        return None
