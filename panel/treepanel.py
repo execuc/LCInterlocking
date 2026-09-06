@@ -97,7 +97,7 @@ class TreePanel(object):
             self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name, bool(item.link_name))
 
     def getStandardButtons(self):
-        return int(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+        return QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel
 
     def accept(self):
         raise ValueError("Must overloaded")
@@ -282,6 +282,8 @@ class TreePanel(object):
         return
 
     def force_selection(self, index):
+        if index is None or not index.isValid():
+            return
         self.selection_model.clearSelection()
         self.selection_model.select(index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
@@ -314,9 +316,11 @@ class TreePanel(object):
             item = index.internalPointer()
             tab, widget = self.tabsList.get(item.get_name())
             if tab is None:
-                raise ValueError("No tab named %s", item.get_name())
+                FreeCAD.Console.PrintWarning("No tab named %s\n" % item.get_name())
+                continue
             if widget is None:
-                raise ValueError("No widget named %s", item.get_name())
+                FreeCAD.Console.PrintWarning("No widget named %s\n" % item.get_name())
+                continue
             fobj = self.active_document.getObject(tab.freecad_obj_name)
             FreeCADGui.Selection.addSelection(fobj, tab.face_name)
 
