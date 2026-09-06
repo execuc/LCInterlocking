@@ -90,9 +90,12 @@ class TreePanel(object):
         self.other_object_list = []
         self.save_initial_objects()
 
+        self.rebuild_tree()
+
+    def rebuild_tree(self):
+        self.model.clear()
         for item in self.parts:
             self.model.append_part(item.name, item.label, bool(item.link_name))
-
         for item in self.faces:
             self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name, bool(item.link_name))
 
@@ -204,35 +207,57 @@ class TreePanel(object):
         if len(indexes) == 0:
             FreeCAD.Console.PrintWarning("Nothing to remove\n")
             return
-        parent_test_name = indexes[0].internalPointer().parent().get_name()
-        for index in indexes:#[1:]:
-            if index.internalPointer().parent().get_name() != parent_test_name:
-                FreeCAD.Console.PrintError("No same level delete")
-                return False
-            elif index.internalPointer().child_count() > 0:
-                FreeCAD.Console.PrintError("%s has children" % index.internalPointer().get_name())
-                return False
-        for index in indexes:
-            item = index.internalPointer()
-            if item.type == TreeItem.PART and len(self.partsList.get_linked_parts(item.get_name())) > 0:
-                FreeCAD.Console.PrintError('Some parts are linked to this part %s\n' % item.get_name())
-                return False
-            elif item.type == TreeItem.TAB and len(self.tabsList.get_linked_tabs(item.get_name())) > 0:
-                FreeCAD.Console.PrintError('Some tabs are linked to this tab %s\n' % item.get_name())
-                return False
+
+        # Cascading delete: removing a part also removes its child faces.
+        items_to_remove = []
+        seen_ids = set()
+
+        def collect(tree_item):
+            if id(tree_item) in seen_ids:
+                return
+            seen_ids.add(id(tree_item))
+            items_to_remove.append(tree_item)
+            for child in list(tree_item.childItems):
+                collect(child)
 
         for index in indexes:
-            item = index.internalPointer()
-            if item.type == TreeItem.PART or item.type == TreeItem.PART_LINK:
-                self.partsList.remove(item.get_name())
-            elif item.type == TreeItem.TAB or item.type == TreeItem.TAB_LINK:
-                self.tabsList.remove(item.get_name())
-            else:
-                FreeCAD.Console.PrintError("Unknown deleter item")
-        rows = sorted(set(index.row() for index in indexes))
-        for row in reversed(rows):
-            self.model.removeRow(row, indexes[0].parent())
+            collect(index.internalPointer())
 
+        names_to_remove = set(item.get_name() for item in items_to_remove)
+
+        for item in items_to_remove:
+            if item.type == TreeItem.PART:
+                linked = [n for n in self.partsList.get_linked_parts(item.get_name()) if n not in names_to_remove]
+                if len(linked) > 0:
+                    FreeCAD.Console.PrintError('Some parts are linked to this part %s\n' % item.get_name())
+                    return False
+            elif item.type == TreeItem.TAB:
+                linked = [tab.name for tab in self.tabsList.get_linked_tabs(item.get_name()) if tab.name not in names_to_remove]
+                if len(linked) > 0:
+                    FreeCAD.Console.PrintError('Some tabs are linked to this tab %s\n' % item.get_name())
+                    return False
+
+        # Retry in passes so a link removed in the same batch as its origin resolves either order.
+        remaining = items_to_remove
+        while remaining:
+            still_remaining = []
+            for item in remaining:
+                try:
+                    if item.type == TreeItem.PART or item.type == TreeItem.PART_LINK:
+                        self.partsList.remove(item.get_name())
+                    elif item.type == TreeItem.TAB or item.type == TreeItem.TAB_LINK:
+                        self.tabsList.remove(item.get_name())
+                    else:
+                        FreeCAD.Console.PrintError("Unknown deleter item")
+                except ValueError:
+                    still_remaining.append(item)
+            if len(still_remaining) == len(remaining):
+                for item in still_remaining:
+                    FreeCAD.Console.PrintError("Could not remove %s\n" % item.get_name())
+                break
+            remaining = still_remaining
+
+        self.rebuild_tree()
         return
 
     def check_faces(self, faces):

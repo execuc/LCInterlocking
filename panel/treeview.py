@@ -86,6 +86,11 @@ class TreeModel(QtCore.QAbstractItemModel):
         super(TreeModel, self).__init__(parent)
         self.rootItem = TreeItem(TreeItem.ROOT, ["Name", "Label"])
 
+    def clear(self):
+        self.beginResetModel()
+        self.rootItem = TreeItem(TreeItem.ROOT, ["Name", "Label"])
+        self.endResetModel()
+
     def append_part(self, name, label, is_link=False):
         row = self.rootItem.child_count() - 1
         self.beginInsertRows(QtCore.QModelIndex(), row, row)
