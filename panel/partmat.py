@@ -124,19 +124,42 @@ class PartsList(object):
 
         return self.part_list[-1]
 
-    def remove(self, name):
+    def remove(self, name, batch_names=frozenset()):
+        self._promote_link(name, batch_names)
         found_index = None
-        linked_parts = self.get_linked_parts(name)
-        if len(linked_parts) > 0:
-            FreeCAD.Console.PrintError('Some parts are linked to this part %s\n' % name)
-            raise ValueError('Some parts are linked to this part %s' % name)
-
         for index in range(len(self.part_list)):
             if self.part_list[index].name == name:
                 found_index = index
                 break
         if found_index is not None:
             self.part_list.pop(found_index)
+
+    def _merged_from_origin(self, origin, link_part):
+        new_part = copy.deepcopy(origin)
+        new_part.name = link_part.name
+        new_part.label = link_part.label
+        new_part.new_name = link_part.new_name
+        new_part.link_name = link_part.link_name
+        return new_part
+
+    def _promote_link(self, name, batch_names):
+        linked_names = [n for n in self.get_linked_parts(name) if n not in batch_names]
+        if len(linked_names) == 0:
+            return
+        origin, widget = self.get(name)
+        promoted_name = linked_names[0]
+        for index in range(len(self.part_list.lst)):
+            if self.part_list.lst[index].name == promoted_name:
+                promoted = self._merged_from_origin(origin, self.part_list.lst[index])
+                promoted.link_name = ""
+                self.part_list.lst[index] = promoted
+                break
+        for other_name in linked_names[1:]:
+            for index in range(len(self.part_list.lst)):
+                if self.part_list.lst[index].name == other_name:
+                    self.part_list.lst[index].link_name = promoted_name
+                    break
+        FreeCAD.Console.PrintMessage("%s promoted to origin of the linked parts group\n" % promoted_name)
 
     def get_linked_parts(self, name):
         el_list = []
@@ -172,12 +195,7 @@ class PartsList(object):
         for part in self.part_list.lst:
             if part.link_name:
                 part_link, widget = self.get(part.link_name)
-                new_part = copy.deepcopy(part_link)
-                new_part.new_name = part.new_name
-                new_part.name = part.name
-                new_part.link_name = part.link_name
-
-                part_properties.append(new_part)
+                part_properties.append(self._merged_from_origin(part_link, part))
             else:
                 part_properties.append(copy.deepcopy(part))
 

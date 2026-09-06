@@ -223,30 +223,19 @@ class TreePanel(object):
         for index in indexes:
             collect(index.internalPointer())
 
+        # An origin still linked from outside this batch is promoted to a new
+        # origin (PartsList/TabsList.remove) rather than blocking the removal.
         names_to_remove = set(item.get_name() for item in items_to_remove)
 
-        for item in items_to_remove:
-            if item.type == TreeItem.PART:
-                linked = [n for n in self.partsList.get_linked_parts(item.get_name()) if n not in names_to_remove]
-                if len(linked) > 0:
-                    FreeCAD.Console.PrintError('Some parts are linked to this part %s\n' % item.get_name())
-                    return False
-            elif item.type == TreeItem.TAB:
-                linked = [tab.name for tab in self.tabsList.get_linked_tabs(item.get_name()) if tab.name not in names_to_remove]
-                if len(linked) > 0:
-                    FreeCAD.Console.PrintError('Some tabs are linked to this tab %s\n' % item.get_name())
-                    return False
-
-        # Retry in passes so a link removed in the same batch as its origin resolves either order.
         remaining = items_to_remove
         while remaining:
             still_remaining = []
             for item in remaining:
                 try:
                     if item.type == TreeItem.PART or item.type == TreeItem.PART_LINK:
-                        self.partsList.remove(item.get_name())
+                        self.partsList.remove(item.get_name(), names_to_remove)
                     elif item.type == TreeItem.TAB or item.type == TreeItem.TAB_LINK:
-                        self.tabsList.remove(item.get_name())
+                        self.tabsList.remove(item.get_name(), names_to_remove)
                     else:
                         FreeCAD.Console.PrintError("Unknown deleter item")
                 except ValueError:
