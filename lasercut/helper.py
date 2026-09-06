@@ -258,6 +258,8 @@ def sort_quad_vertex(list_edges, reverse):
 
 def biggest_area_faces(freecad_shape):
     sorted_list = sort_area_shape_faces(freecad_shape)
+    if not sorted_list:
+        raise ValueError("Shape has no usable faces (check the shape is valid and not empty)")
     biggest_area_face = sorted_list[-1]
 #       contains : 0:normal, 1:area mm2, 2; list of faces
     return biggest_area_face
@@ -265,6 +267,8 @@ def biggest_area_faces(freecad_shape):
 
 def smallest_area_faces(freecad_shape):
     sorted_list = sort_area_shape_faces(freecad_shape)
+    if not sorted_list:
+        raise ValueError("Shape has no usable faces (check the shape is valid and not empty)")
     smallest_area_face = sorted_list[0]
 #       contains : 0:normal, 1:area mm2, 2; list of faces
     return smallest_area_face

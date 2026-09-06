@@ -38,6 +38,7 @@ from panel import selection
 from lasercut.tabproperties import TabProperties
 from panel.treeview import TreeModel, TreeItem
 from panel.propertieslist import PropertiesList
+from lasercut import autodetect
 
 
 PREVIEW_NONE = 0
@@ -90,14 +91,17 @@ class TreePanel(object):
         self.other_object_list = []
         self.save_initial_objects()
 
+        self.rebuild_tree()
+
+    def rebuild_tree(self):
+        self.model.clear()
         for item in self.parts:
             self.model.append_part(item.name, item.label, bool(item.link_name))
-
         for item in self.faces:
             self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name, bool(item.link_name))
 
     def getStandardButtons(self):
-        return int(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+        return QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel
 
     def accept(self):
         raise ValueError("Must overloaded")
@@ -143,6 +147,18 @@ class TreePanel(object):
         add_same_faces_button.clicked.connect(self.add_same_tabs)
         h_box.addWidget(add_faces_button)
         h_box.addWidget(add_same_faces_button)
+        self.tree_vbox.addLayout(h_box)
+        # Auto button
+        h_box = QtGui.QHBoxLayout()
+        h_box.addWidget(QtGui.QLabel('Tab width:', self.tree_widget))
+        self.auto_tab_width_box = QtGui.QDoubleSpinBox(self.tree_widget)
+        self.auto_tab_width_box.setRange(1., 300.)
+        self.auto_tab_width_box.setDecimals(2)
+        self.auto_tab_width_box.setValue(10.)
+        h_box.addWidget(self.auto_tab_width_box)
+        auto_button = QtGui.QPushButton('Auto-add faces', self.tree_widget)
+        auto_button.clicked.connect(self.auto_configure)
+        h_box.addWidget(auto_button)
         self.tree_vbox.addLayout(h_box)
         # tree
         self.selection_model = self.tree_view_widget.selectionModel()
@@ -204,35 +220,46 @@ class TreePanel(object):
         if len(indexes) == 0:
             FreeCAD.Console.PrintWarning("Nothing to remove\n")
             return
-        parent_test_name = indexes[0].internalPointer().parent().get_name()
-        for index in indexes:#[1:]:
-            if index.internalPointer().parent().get_name() != parent_test_name:
-                FreeCAD.Console.PrintError("No same level delete")
-                return False
-            elif index.internalPointer().child_count() > 0:
-                FreeCAD.Console.PrintError("%s has children" % index.internalPointer().get_name())
-                return False
-        for index in indexes:
-            item = index.internalPointer()
-            if item.type == TreeItem.PART and len(self.partsList.get_linked_parts(item.get_name())) > 0:
-                FreeCAD.Console.PrintError('Some parts are linked to this part %s\n' % item.get_name())
-                return False
-            elif item.type == TreeItem.TAB and len(self.tabsList.get_linked_tabs(item.get_name())) > 0:
-                FreeCAD.Console.PrintError('Some tabs are linked to this tab %s\n' % item.get_name())
-                return False
+
+        # Cascading delete: removing a part also removes its child faces.
+        items_to_remove = []
+        seen_ids = set()
+
+        def collect(tree_item):
+            if id(tree_item) in seen_ids:
+                return
+            seen_ids.add(id(tree_item))
+            items_to_remove.append(tree_item)
+            for child in list(tree_item.childItems):
+                collect(child)
 
         for index in indexes:
-            item = index.internalPointer()
-            if item.type == TreeItem.PART or item.type == TreeItem.PART_LINK:
-                self.partsList.remove(item.get_name())
-            elif item.type == TreeItem.TAB or item.type == TreeItem.TAB_LINK:
-                self.tabsList.remove(item.get_name())
-            else:
-                FreeCAD.Console.PrintError("Unknown deleter item")
-        rows = sorted(set(index.row() for index in indexes))
-        for row in reversed(rows):
-            self.model.removeRow(row, indexes[0].parent())
+            collect(index.internalPointer())
 
+        # An origin still linked from outside this batch is promoted to a new
+        # origin (PartsList/TabsList.remove) rather than blocking the removal.
+        names_to_remove = set(item.get_name() for item in items_to_remove)
+
+        remaining = items_to_remove
+        while remaining:
+            still_remaining = []
+            for item in remaining:
+                try:
+                    if item.type == TreeItem.PART or item.type == TreeItem.PART_LINK:
+                        self.partsList.remove(item.get_name(), names_to_remove)
+                    elif item.type == TreeItem.TAB or item.type == TreeItem.TAB_LINK:
+                        self.tabsList.remove(item.get_name(), names_to_remove)
+                    else:
+                        FreeCAD.Console.PrintError("Unknown deleter item")
+                except ValueError:
+                    still_remaining.append(item)
+            if len(still_remaining) == len(remaining):
+                for item in still_remaining:
+                    FreeCAD.Console.PrintError("Could not remove %s\n" % item.get_name())
+                break
+            remaining = still_remaining
+
+        self.rebuild_tree()
         return
 
     def check_faces(self, faces):
@@ -281,7 +308,83 @@ class TreePanel(object):
         self.force_selection(index)
         return
 
+    def auto_configure(self):
+        self.check_is_in_active_view()
+        freecad_objects = []
+        thickness_by_name = {}
+        for material in self.partsList:
+            freecad_obj = self.active_document.getObject(material.name)
+            if freecad_obj is None:
+                FreeCAD.Console.PrintWarning("Part %s no longer exists in the document\n" % material.name)
+                continue
+            freecad_objects.append(freecad_obj)
+            thickness_by_name[freecad_obj.Name] = material.thickness
+        if len(freecad_objects) == 0:
+            FreeCAD.Console.PrintWarning("No parts added yet\n")
+            return
+
+        desired_width = self.auto_tab_width_box.value()
+        tab_type = self.tab_type_box.currentText()
+        connections, ambiguous, unmatched = autodetect.find_connections(freecad_objects, thickness_by_name)
+
+        # Skip connections where the face is already configured, so a repeated
+        # Auto run never disturbs faces added or edited manually before it.
+        filtered = []
+        for candidate, target in connections:
+            tab_name = "%s.%s" % (candidate.freecad_obj.Name, candidate.face_name)
+            if self.tabsList.exist(tab_name):
+                continue
+            tabs_number, tabs_width = autodetect.compute_tab_sizing(candidate.y_length, desired_width, tab_type)
+            filtered.append((candidate, target, tabs_number, tabs_width))
+
+        # Group by size so same-size connections are linked (edit one, edit all).
+        groups = {}
+        for candidate, target, tabs_number, tabs_width in filtered:
+            key = (round(candidate.y_length, 1), round(candidate.thickness, 1))
+            groups.setdefault(key, []).append((candidate, target, tabs_number, tabs_width))
+
+        added_count = 0
+        linked_group_count = 0
+        last_index = None
+        for key, entries in groups.items():
+            origin_candidate, origin_target, tabs_number, tabs_width = entries[0]
+            face_dict = {'freecad_object': origin_candidate.freecad_obj,
+                         'face': origin_candidate.face,
+                         'name': origin_candidate.face_name}
+            try:
+                item = self.tabsList.append(face_dict, tab_type)
+            except ValueError as e:
+                FreeCAD.Console.PrintError(e)
+                continue
+            item.tabs_number = tabs_number
+            item.tabs_width = tabs_width
+            last_index = self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name)
+            added_count += 1
+
+            if len(entries) > 1:
+                linked_group_count += 1
+                for link_candidate, _, _, _ in entries[1:]:
+                    link_dict = {'freecad_object': link_candidate.freecad_obj,
+                                 'face': link_candidate.face,
+                                 'name': link_candidate.face_name}
+                    try:
+                        sub_item = self.tabsList.append_link(link_dict, item.tab_name)
+                    except ValueError as e:
+                        FreeCAD.Console.PrintError(e)
+                        continue
+                    self.model.append_tab(sub_item.freecad_obj_name, sub_item.tab_name, sub_item.face_name, True)
+                    added_count += 1
+
+        FreeCAD.Console.PrintMessage(
+            "Auto: added %d connection(s) in %d group(s) (%d linked), %d unmatched, %d ambiguous face(s)\n"
+            % (added_count, len(groups), linked_group_count, len(unmatched), len(ambiguous)))
+        if last_index is not None:
+            self.force_selection(last_index)
+        return
+
     def force_selection(self, index):
+        if index is None or not index.isValid():
+            return
         self.selection_model.clearSelection()
         self.selection_model.select(index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
@@ -314,9 +417,11 @@ class TreePanel(object):
             item = index.internalPointer()
             tab, widget = self.tabsList.get(item.get_name())
             if tab is None:
-                raise ValueError("No tab named %s", item.get_name())
+                FreeCAD.Console.PrintWarning("No tab named %s\n" % item.get_name())
+                continue
             if widget is None:
-                raise ValueError("No widget named %s", item.get_name())
+                FreeCAD.Console.PrintWarning("No widget named %s\n" % item.get_name())
+                continue
             fobj = self.active_document.getObject(tab.freecad_obj_name)
             FreeCADGui.Selection.addSelection(fobj, tab.face_name)
 
@@ -420,3 +525,38 @@ class TreePanel(object):
     def save_link_properties(self):
         self.partsList.get_parts_properties()
         self.tabsList.get_tabs_properties()
+
+
+class OriginalPartsGroup:
+    """Presentational-only folder: claims parts via its own link list, never App::DocumentObjectGroup's Group, so it never reparents them."""
+
+    def __init__(self, obj):
+        obj.addProperty('App::PropertyLinkList', 'parts').parts = []
+        obj.Proxy = self
+
+    def execute(self, fp):
+        pass
+
+
+class OriginalPartsGroupViewProvider:
+    def __init__(self, vobj):
+        vobj.Proxy = self
+
+    def attach(self, vobj):
+        self.ViewObject = vobj
+        self.Object = vobj.Object
+
+    def claimChildren(self):
+        return list(self.Object.parts)
+
+    def getIcon(self):
+        return ":/icons/Group.svg"
+
+    def onChanged(self, vp, prop):
+        pass
+
+    def __getstate__(self):
+        return None
+
+    def __setstate__(self, state):
+        return None
