@@ -120,25 +120,14 @@ class MultipleJoinGroup:
             fp.need_recompute = False
 
             document = fp.Document
-            if len(fp.fromParts) > 0:
-                groupObj = fp.fromParts[0]
-            else:
-                groupObj = document.addObject("App::DocumentObjectGroup", str(fp.Name) + "_origin_parts")
-
-            subObjectList = groupObj.Group
-            for subObj in subObjectList:
-                groupObj.removeObject(subObj)
-
             fp.fromParts = []
             parts = []
             freedac_origin_obj = []
-            freedac_origin_obj.append(groupObj)
             for part in fp.parts.lst:
                 cp_part = copy.deepcopy(part)
                 freecad_obj = document.getObject(cp_part.name)
                 freedac_origin_obj.append(freecad_obj)
                 cp_part.recomputeInit(freecad_obj)
-                groupObj.addObject(freecad_obj)
                 parts.append(cp_part)
 
             fp.fromParts = freedac_origin_obj
@@ -217,10 +206,7 @@ class MultipleJoinViewProvider:
         self.Object = vobj.Object
 
     def claimChildren(self):
-        if len(self.Object.fromParts) > 0:
-            return [self.Object.fromParts[0]] + self.Object.generatedParts
-        else:
-            return []
+        return list(self.Object.fromParts) + list(self.Object.generatedParts)
 
 
 class MultipleJoins(TreePanel):
