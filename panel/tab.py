@@ -192,12 +192,9 @@ class TabsList(object):
         #self.faces_widget_list.append(TabLink(tab_properties))
         return self.faces[-1]#, self.faces_widget_list[-1]
 
-    def remove(self, name):
+    def remove(self, name, batch_names=frozenset()):
+        self._promote_link(name, batch_names)
         found_index = None
-        linked_tabs = self.get_linked_tabs(name)
-        if len(linked_tabs) > 0:
-            raise ValueError('Some tabs are linked to this part %s' % name)
-
         for index in range(len(self.faces)):
             if self.faces[index].tab_name == name:
                 found_index = index
@@ -205,6 +202,38 @@ class TabsList(object):
 
         if found_index is not None:
             self.faces.pop(found_index)
+
+    def _merged_from_origin(self, origin, link_tab):
+        new_tab = copy.deepcopy(origin)
+        new_tab.link_name = link_tab.link_name
+        new_tab.tab_name = link_tab.tab_name
+        new_tab.face_name = link_tab.face_name
+        new_tab.description = link_tab.description
+        new_tab.freecad_obj_name = link_tab.freecad_obj_name
+        new_tab.y_invert = link_tab.y_invert
+        new_tab.transform_matrix = link_tab.transform_matrix
+        new_tab.thickness = link_tab.thickness
+        new_tab.y_length = link_tab.y_length
+        return new_tab
+
+    def _promote_link(self, name, batch_names):
+        linked = [tab for tab in self.get_linked_tabs(name) if tab.tab_name not in batch_names]
+        if len(linked) == 0:
+            return
+        origin, widget = self.get(name)
+        promoted_tab_name = linked[0].tab_name
+        for index in range(len(self.faces.lst)):
+            if self.faces.lst[index].tab_name == promoted_tab_name:
+                promoted = self._merged_from_origin(origin, self.faces.lst[index])
+                promoted.link_name = ""
+                self.faces.lst[index] = promoted
+                break
+        for other in linked[1:]:
+            for index in range(len(self.faces.lst)):
+                if self.faces.lst[index].tab_name == other.tab_name:
+                    self.faces.lst[index].link_name = promoted_tab_name
+                    break
+        FreeCAD.Console.PrintMessage("%s promoted to origin of the linked faces group\n" % promoted_tab_name)
 
     def exist(self, name):
         for part in self.faces:
@@ -230,7 +259,7 @@ class TabsList(object):
     def get_linked_tabs(self, name):
         el_list = []
         for tab in self.faces:
-            if isinstance(tab, TabLink) and tab.link_name == name:
+            if tab.link_name == name:
                 el_list.append(tab)
         return el_list
 
@@ -242,18 +271,7 @@ class TabsList(object):
         for tab in self.faces.lst:
             if tab.link_name:
                 tab_link, widget = self.get(tab.link_name)
-                new_tab = copy.deepcopy(tab_link)
-                new_tab.link_name = tab.link_name
-                new_tab.tab_name = tab.tab_name
-                new_tab.face_name = tab.face_name
-                new_tab.description = tab.description
-                new_tab.freecad_obj_name = tab.freecad_obj_name
-                new_tab.y_invert = tab.y_invert
-                new_tab.transform_matrix = tab.transform_matrix
-                new_tab.thickness = tab.thickness
-                new_tab.y_length = tab.y_length
-
-                tabs_properties.append(new_tab)
+                tabs_properties.append(self._merged_from_origin(tab_link, tab))
             else:
                 tabs_properties.append(copy.deepcopy(tab))
 
