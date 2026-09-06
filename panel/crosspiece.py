@@ -27,7 +27,7 @@ import FreeCADGui
 from FreeCAD import Gui, Matrix
 import os
 from lasercut.crosspart import make_cross_parts
-from panel.treepanel import TreePanel, PREVIEW_NONE, PREVIEW_NORMAL, PREVIEW_FAST
+from panel.treepanel import TreePanel, PREVIEW_NONE, PREVIEW_NORMAL, PREVIEW_FAST, OriginalPartsGroup, OriginalPartsGroupViewProvider
 from panel.propertieslist import PropertiesList
 import json
 import copy
@@ -44,6 +44,7 @@ class CrossPieceGroup:
         obj.addProperty('App::PropertyPythonObject', 'preview').preview = PREVIEW_NONE
         obj.addProperty('App::PropertyLinkList', 'generatedParts').generatedParts = []
         obj.addProperty('App::PropertyLinkList', 'fromParts').fromParts = []
+        obj.addProperty('App::PropertyLink', 'originFolder').originFolder = None
         obj.addProperty('App::PropertyPythonObject', 'edit').edit = False
         obj.addProperty('App::PropertyPythonObject', 'namesMapping').namesMapping = {}
         obj.Proxy = self
@@ -121,6 +122,16 @@ class CrossPieceGroup:
                 parts.append(cp_part)
 
             fp.fromParts = freedac_origin_obj
+
+            if not hasattr(fp, "originFolder"):
+                fp.addProperty('App::PropertyLink', 'originFolder').originFolder = None
+            if fp.originFolder is None:
+                origin_folder = document.addObject("App::FeaturePython", str(fp.Name) + "_origin_parts")
+                OriginalPartsGroup(origin_folder)
+                OriginalPartsGroupViewProvider(origin_folder.ViewObject)
+                fp.originFolder = origin_folder
+            fp.originFolder.parts = freedac_origin_obj
+
             computed_parts = make_cross_parts(parts)
 
             previous_nameMapping = copy.copy(fp.namesMapping)
@@ -187,7 +198,10 @@ class CrossPieceViewProvider:
         self.Object = vobj.Object
 
     def claimChildren(self):
-        return list(self.Object.fromParts) + list(self.Object.generatedParts)
+        children = []
+        if hasattr(self.Object, "originFolder") and self.Object.originFolder is not None:
+            children.append(self.Object.originFolder)
+        return children + list(self.Object.generatedParts)
 
 
 class CrossPiece(TreePanel):
