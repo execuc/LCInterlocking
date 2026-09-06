@@ -344,6 +344,7 @@ class TreePanel(object):
             groups.setdefault(key, []).append((candidate, target, tabs_number, tabs_width))
 
         added_count = 0
+        linked_group_count = 0
         last_index = None
         for key, entries in groups.items():
             origin_candidate, origin_target, tabs_number, tabs_width = entries[0]
@@ -359,11 +360,9 @@ class TreePanel(object):
             item.tabs_width = tabs_width
             last_index = self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name)
             added_count += 1
-            FreeCAD.Console.PrintMessage("Auto: added %s.%s -> %s (%.1fmm, %d tabs)\n" % (
-                origin_candidate.freecad_obj.Name, origin_candidate.face_name,
-                origin_target.Name, origin_candidate.y_length, tabs_number))
 
             if len(entries) > 1:
+                linked_group_count += 1
                 for link_candidate, _, _, _ in entries[1:]:
                     link_dict = {'freecad_object': link_candidate.freecad_obj,
                                  'face': link_candidate.face,
@@ -375,13 +374,10 @@ class TreePanel(object):
                         continue
                     self.model.append_tab(sub_item.freecad_obj_name, sub_item.tab_name, sub_item.face_name, True)
                     added_count += 1
-                FreeCAD.Console.PrintMessage(
-                    "Auto: linked %d connections of size %.1fx%.1fmm - verify these are meant to share settings\n"
-                    % (len(entries), key[0], key[1]))
 
         FreeCAD.Console.PrintMessage(
-            "Auto: added %d connection(s) in %d group(s), %d unmatched, %d ambiguous face(s) (review the tree "
-            "and use Remove item for anything wrong)\n" % (added_count, len(groups), len(unmatched), len(ambiguous)))
+            "Auto: added %d connection(s) in %d group(s) (%d linked), %d unmatched, %d ambiguous face(s)\n"
+            % (added_count, len(groups), linked_group_count, len(unmatched), len(ambiguous)))
         if last_index is not None:
             self.force_selection(last_index)
         return
