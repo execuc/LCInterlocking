@@ -38,6 +38,7 @@ from panel import selection
 from lasercut.tabproperties import TabProperties
 from panel.treeview import TreeModel, TreeItem
 from panel.propertieslist import PropertiesList
+from lasercut import autodetect
 
 
 PREVIEW_NONE = 0
@@ -146,6 +147,18 @@ class TreePanel(object):
         add_same_faces_button.clicked.connect(self.add_same_tabs)
         h_box.addWidget(add_faces_button)
         h_box.addWidget(add_same_faces_button)
+        self.tree_vbox.addLayout(h_box)
+        # Auto button
+        h_box = QtGui.QHBoxLayout()
+        h_box.addWidget(QtGui.QLabel('Tab width:', self.tree_widget))
+        self.auto_tab_width_box = QtGui.QDoubleSpinBox(self.tree_widget)
+        self.auto_tab_width_box.setRange(1., 300.)
+        self.auto_tab_width_box.setDecimals(2)
+        self.auto_tab_width_box.setValue(10.)
+        h_box.addWidget(self.auto_tab_width_box)
+        auto_button = QtGui.QPushButton('Auto-add faces', self.tree_widget)
+        auto_button.clicked.connect(self.auto_configure)
+        h_box.addWidget(auto_button)
         self.tree_vbox.addLayout(h_box)
         # tree
         self.selection_model = self.tree_view_widget.selectionModel()
@@ -293,6 +306,84 @@ class TreePanel(object):
             FreeCAD.Console.PrintError(e)
             return
         self.force_selection(index)
+        return
+
+    def auto_configure(self):
+        self.check_is_in_active_view()
+        freecad_objects = []
+        thickness_by_name = {}
+        for material in self.partsList:
+            freecad_obj = self.active_document.getObject(material.name)
+            if freecad_obj is None:
+                FreeCAD.Console.PrintWarning("Part %s no longer exists in the document\n" % material.name)
+                continue
+            freecad_objects.append(freecad_obj)
+            thickness_by_name[freecad_obj.Name] = material.thickness
+        if len(freecad_objects) == 0:
+            FreeCAD.Console.PrintWarning("No parts added yet\n")
+            return
+
+        desired_width = self.auto_tab_width_box.value()
+        tab_type = self.tab_type_box.currentText()
+        connections, ambiguous, unmatched = autodetect.find_connections(freecad_objects, thickness_by_name)
+
+        # Skip connections where the face is already configured, so a repeated
+        # Auto run never disturbs faces added or edited manually before it.
+        filtered = []
+        for candidate, target in connections:
+            tab_name = "%s.%s" % (candidate.freecad_obj.Name, candidate.face_name)
+            if self.tabsList.exist(tab_name):
+                continue
+            tabs_number, tabs_width = autodetect.compute_tab_sizing(candidate.y_length, desired_width, tab_type)
+            filtered.append((candidate, target, tabs_number, tabs_width))
+
+        # Group by size so same-size connections are linked (edit one, edit all).
+        groups = {}
+        for candidate, target, tabs_number, tabs_width in filtered:
+            key = (round(candidate.y_length, 1), round(candidate.thickness, 1))
+            groups.setdefault(key, []).append((candidate, target, tabs_number, tabs_width))
+
+        added_count = 0
+        last_index = None
+        for key, entries in groups.items():
+            origin_candidate, origin_target, tabs_number, tabs_width = entries[0]
+            face_dict = {'freecad_object': origin_candidate.freecad_obj,
+                         'face': origin_candidate.face,
+                         'name': origin_candidate.face_name}
+            try:
+                item = self.tabsList.append(face_dict, tab_type)
+            except ValueError as e:
+                FreeCAD.Console.PrintError(e)
+                continue
+            item.tabs_number = tabs_number
+            item.tabs_width = tabs_width
+            last_index = self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name)
+            added_count += 1
+            FreeCAD.Console.PrintMessage("Auto: added %s.%s -> %s (%.1fmm, %d tabs)\n" % (
+                origin_candidate.freecad_obj.Name, origin_candidate.face_name,
+                origin_target.Name, origin_candidate.y_length, tabs_number))
+
+            if len(entries) > 1:
+                for link_candidate, _, _, _ in entries[1:]:
+                    link_dict = {'freecad_object': link_candidate.freecad_obj,
+                                 'face': link_candidate.face,
+                                 'name': link_candidate.face_name}
+                    try:
+                        sub_item = self.tabsList.append_link(link_dict, item.tab_name)
+                    except ValueError as e:
+                        FreeCAD.Console.PrintError(e)
+                        continue
+                    self.model.append_tab(sub_item.freecad_obj_name, sub_item.tab_name, sub_item.face_name, True)
+                    added_count += 1
+                FreeCAD.Console.PrintMessage(
+                    "Auto: linked %d connections of size %.1fx%.1fmm - verify these are meant to share settings\n"
+                    % (len(entries), key[0], key[1]))
+
+        FreeCAD.Console.PrintMessage(
+            "Auto: added %d connection(s) in %d group(s), %d unmatched, %d ambiguous face(s) (review the tree "
+            "and use Remove item for anything wrong)\n" % (added_count, len(groups), len(unmatched), len(ambiguous)))
+        if last_index is not None:
+            self.force_selection(last_index)
         return
 
     def force_selection(self, index):
