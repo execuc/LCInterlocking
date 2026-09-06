@@ -203,6 +203,16 @@ class CrossPieceViewProvider:
             children.append(self.Object.originFolder)
         return children + list(self.Object.generatedParts)
 
+    def onDelete(self, *args):
+        document = self.Object.Document
+        for obj in self.Object.fromParts:
+            obj.ViewObject.show()
+        for obj in list(self.Object.generatedParts):
+            document.removeObject(obj.Name)
+        if hasattr(self.Object, "originFolder") and self.Object.originFolder is not None:
+            document.removeObject(self.Object.originFolder.Name)
+        return True
+
 
 class CrossPiece(TreePanel):
     def __init__(self, obj_join):
