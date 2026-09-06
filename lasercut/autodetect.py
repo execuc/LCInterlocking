@@ -75,17 +75,11 @@ def _intersecting_parts(candidate, freecad_objects, thickness_by_name):
 
 
 def find_connections(freecad_objects, thickness_by_name):
-    """For every candidate tab face, test (via the same boolean-intersection
-    test the real cut algorithm uses) which other part it would actually cut
-    into. A face connecting to exactly one other part is a confident match;
-    each physical connection is only reported once (from whichever side is
-    found first), since only one side needs a tab entry."""
     candidates = collect_candidate_faces(freecad_objects)
 
-    connections = []
     ambiguous = []
     unmatched = []
-    seen_pairs = set()
+    best_by_pair = {}
     for candidate in candidates:
         matches = _intersecting_parts(candidate, freecad_objects, thickness_by_name)
         if len(matches) == 0:
@@ -95,10 +89,11 @@ def find_connections(freecad_objects, thickness_by_name):
         else:
             target = matches[0]
             pair_key = frozenset([candidate.freecad_obj.Name, target.Name])
-            if pair_key in seen_pairs:
-                continue
-            seen_pairs.add(pair_key)
-            connections.append((candidate, target))
+            existing = best_by_pair.get(pair_key)
+            # Both sides of a T-joint pass the test; keep the smaller face as the tab face.
+            if existing is None or candidate.face.Area < existing[0].face.Area:
+                best_by_pair[pair_key] = (candidate, target)
+    connections = list(best_by_pair.values())
     return connections, ambiguous, unmatched
 
 
