@@ -81,7 +81,8 @@ class MaterialProperties(ObjectProperties):
             FreeCAD.Console.PrintError(e)
             return
         if compare_value(thickness, self.thickness) is False:
-            FreeCAD.Console.PrintError("Recomputed thickness for %s is different (%f != %f)\n" % (self.name, thickness, self.thickness))
+            FreeCAD.Console.PrintMessage("Thickness for %s updated (%f -> %f)\n" % (self.name, self.thickness, thickness))
+            self.thickness = thickness
 
 
 # Prendre la normal la plus présente en terme de surface (biggest_area_faces)
