@@ -129,6 +129,7 @@ class MultipleJoinGroup:
                 freecad_obj = document.getObject(cp_part.name)
                 freedac_origin_obj.append(freecad_obj)
                 cp_part.recomputeInit(freecad_obj)
+                part.thickness = cp_part.thickness
                 parts.append(cp_part)
 
             fp.fromParts = freedac_origin_obj
