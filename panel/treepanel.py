@@ -90,14 +90,17 @@ class TreePanel(object):
         self.other_object_list = []
         self.save_initial_objects()
 
+        self.rebuild_tree()
+
+    def rebuild_tree(self):
+        self.model.clear()
         for item in self.parts:
             self.model.append_part(item.name, item.label, bool(item.link_name))
-
         for item in self.faces:
             self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name, bool(item.link_name))
 
     def getStandardButtons(self):
-        return int(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+        return QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel
 
     def accept(self):
         raise ValueError("Must overloaded")
@@ -204,35 +207,46 @@ class TreePanel(object):
         if len(indexes) == 0:
             FreeCAD.Console.PrintWarning("Nothing to remove\n")
             return
-        parent_test_name = indexes[0].internalPointer().parent().get_name()
-        for index in indexes:#[1:]:
-            if index.internalPointer().parent().get_name() != parent_test_name:
-                FreeCAD.Console.PrintError("No same level delete")
-                return False
-            elif index.internalPointer().child_count() > 0:
-                FreeCAD.Console.PrintError("%s has children" % index.internalPointer().get_name())
-                return False
-        for index in indexes:
-            item = index.internalPointer()
-            if item.type == TreeItem.PART and len(self.partsList.get_linked_parts(item.get_name())) > 0:
-                FreeCAD.Console.PrintError('Some parts are linked to this part %s\n' % item.get_name())
-                return False
-            elif item.type == TreeItem.TAB and len(self.tabsList.get_linked_tabs(item.get_name())) > 0:
-                FreeCAD.Console.PrintError('Some tabs are linked to this tab %s\n' % item.get_name())
-                return False
+
+        # Cascading delete: removing a part also removes its child faces.
+        items_to_remove = []
+        seen_ids = set()
+
+        def collect(tree_item):
+            if id(tree_item) in seen_ids:
+                return
+            seen_ids.add(id(tree_item))
+            items_to_remove.append(tree_item)
+            for child in list(tree_item.childItems):
+                collect(child)
 
         for index in indexes:
-            item = index.internalPointer()
-            if item.type == TreeItem.PART or item.type == TreeItem.PART_LINK:
-                self.partsList.remove(item.get_name())
-            elif item.type == TreeItem.TAB or item.type == TreeItem.TAB_LINK:
-                self.tabsList.remove(item.get_name())
-            else:
-                FreeCAD.Console.PrintError("Unknown deleter item")
-        rows = sorted(set(index.row() for index in indexes))
-        for row in reversed(rows):
-            self.model.removeRow(row, indexes[0].parent())
+            collect(index.internalPointer())
 
+        # An origin still linked from outside this batch is promoted to a new
+        # origin (PartsList/TabsList.remove) rather than blocking the removal.
+        names_to_remove = set(item.get_name() for item in items_to_remove)
+
+        remaining = items_to_remove
+        while remaining:
+            still_remaining = []
+            for item in remaining:
+                try:
+                    if item.type == TreeItem.PART or item.type == TreeItem.PART_LINK:
+                        self.partsList.remove(item.get_name(), names_to_remove)
+                    elif item.type == TreeItem.TAB or item.type == TreeItem.TAB_LINK:
+                        self.tabsList.remove(item.get_name(), names_to_remove)
+                    else:
+                        FreeCAD.Console.PrintError("Unknown deleter item")
+                except ValueError:
+                    still_remaining.append(item)
+            if len(still_remaining) == len(remaining):
+                for item in still_remaining:
+                    FreeCAD.Console.PrintError("Could not remove %s\n" % item.get_name())
+                break
+            remaining = still_remaining
+
+        self.rebuild_tree()
         return
 
     def check_faces(self, faces):
@@ -282,6 +296,8 @@ class TreePanel(object):
         return
 
     def force_selection(self, index):
+        if index is None or not index.isValid():
+            return
         self.selection_model.clearSelection()
         self.selection_model.select(index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
@@ -314,9 +330,11 @@ class TreePanel(object):
             item = index.internalPointer()
             tab, widget = self.tabsList.get(item.get_name())
             if tab is None:
-                raise ValueError("No tab named %s", item.get_name())
+                FreeCAD.Console.PrintWarning("No tab named %s\n" % item.get_name())
+                continue
             if widget is None:
-                raise ValueError("No widget named %s", item.get_name())
+                FreeCAD.Console.PrintWarning("No widget named %s\n" % item.get_name())
+                continue
             fobj = self.active_document.getObject(tab.freecad_obj_name)
             FreeCADGui.Selection.addSelection(fobj, tab.face_name)
 
@@ -420,3 +438,38 @@ class TreePanel(object):
     def save_link_properties(self):
         self.partsList.get_parts_properties()
         self.tabsList.get_tabs_properties()
+
+
+class OriginalPartsGroup:
+    """Presentational-only folder: claims parts via its own link list, never App::DocumentObjectGroup's Group, so it never reparents them."""
+
+    def __init__(self, obj):
+        obj.addProperty('App::PropertyLinkList', 'parts').parts = []
+        obj.Proxy = self
+
+    def execute(self, fp):
+        pass
+
+
+class OriginalPartsGroupViewProvider:
+    def __init__(self, vobj):
+        vobj.Proxy = self
+
+    def attach(self, vobj):
+        self.ViewObject = vobj
+        self.Object = vobj.Object
+
+    def claimChildren(self):
+        return list(self.Object.parts)
+
+    def getIcon(self):
+        return ":/icons/Group.svg"
+
+    def onChanged(self, vp, prop):
+        pass
+
+    def __getstate__(self):
+        return None
+
+    def __setstate__(self, state):
+        return None

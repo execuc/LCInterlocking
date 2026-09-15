@@ -75,9 +75,14 @@ class MaterialProperties(ObjectProperties):
 
     def recomputeInit(self, freecad_obj):
         self.freecad_object = freecad_obj
-        thickness = retrieve_thickness_from_biggest_face(freecad_obj)
+        try:
+            thickness = retrieve_thickness_from_biggest_face(freecad_obj)
+        except ValueError as e:
+            FreeCAD.Console.PrintError(e)
+            return
         if compare_value(thickness, self.thickness) is False:
-            FreeCAD.Console.PrintError("Recomputed thickness for %s is different (%f != %f)\n" % (self.name, thickness, self.thickness))
+            FreeCAD.Console.PrintMessage("Thickness for %s updated (%f -> %f)\n" % (self.name, self.thickness, thickness))
+            self.thickness = thickness
 
 
 # Prendre la normal la plus présente en terme de surface (biggest_area_faces)

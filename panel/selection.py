@@ -25,19 +25,30 @@
 import FreeCADGui
 
 
+def resolve_canonical_object(obj):
+    """Resolve a PartDesign Tip/sub-feature to its owning Body."""
+    if obj is None or obj.TypeId == "PartDesign::Body":
+        return obj
+    for parent in obj.InList:
+        if parent.TypeId == "PartDesign::Body" and obj in parent.Group:
+            return parent
+    return obj
+
+
 def get_freecad_objects_list():
     objs_sel = []
     for selection in FreeCADGui.Selection.getSelectionEx():
-        objs_sel.append(selection.Object)
+        objs_sel.append(resolve_canonical_object(selection.Object))
     return objs_sel
 
 
 def get_freecad_faces_objects_list():
     face_obj_list = []
     for selection_obj in FreeCADGui.Selection.getSelectionEx():
+        canonical_obj = resolve_canonical_object(selection_obj.Object)
         index = 0
         for face in selection_obj.SubObjects:
-            face_obj_list.append({'freecad_object': selection_obj.Object, 'face': face,
+            face_obj_list.append({'freecad_object': canonical_obj, 'face': face,
                                   'name': selection_obj.SubElementNames[index]})
             index += 1
     return face_obj_list
