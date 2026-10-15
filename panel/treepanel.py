@@ -97,7 +97,8 @@ class TreePanel(object):
             self.model.append_tab(item.freecad_obj_name, item.tab_name, item.face_name, bool(item.link_name))
 
     def getStandardButtons(self):
-        return int(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+        buttons = QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel
+        return int(getattr(buttons, "value", buttons))  # PySide6 flags are enums, not ints
 
     def accept(self):
         raise ValueError("Must overloaded")
@@ -282,6 +283,8 @@ class TreePanel(object):
         return
 
     def force_selection(self, index):
+        if index is None:  # nothing was added; PySide6 refuses None
+            return
         self.selection_model.clearSelection()
         self.selection_model.select(index, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
