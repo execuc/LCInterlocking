@@ -8,6 +8,9 @@ Procedure
  * Select all the involved part and click on "Add same parts" if they share the same material properties, else click on "Add parts"
  ![Illustration](imgs/crosspiece/addparts.png)
  * Configure material properties on black font item from the tree view as thickness, laser cut beam diameter....
+ * Optionally choose the **Slot side** of each part: *Top* or *Bottom* to pick which side its slots open on, or *Auto* (default) to let the tool decide. When one part of a joint is set and the other is on *Auto*, the other part gets the opposite side.
+   * *Top* is the +Z side of the joint. If the joint is horizontal, it is +Y, then +X.
+   * Two crossing parts can't both use the same side. If one part sticks out above or below the other, the geometry decides the sides, and a conflicting choice shows an error.
  * Click on OK to create a "Crosspiece" group. Interlocking parts are below this group. Origin parts are represented inside a sub group.
  ![Illustration](imgs/crosspiece/final.png)
   

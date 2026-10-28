@@ -33,12 +33,17 @@ class MaterialProperties(ObjectProperties):
     _allowed = ('type', 'thickness', 'thickness_tolerance', 'hole_width_tolerance',
                 'laser_beam_diameter', 'name', 'label', 'link_name',
                 # For cross Part
-                'dog_bone', 'node_type', 'node_thickness') #'freecad_object_index'
+                'dog_bone', 'node_type', 'node_thickness', 'slot_side') #'freecad_object_index'
     TYPE_LASER_CUT = 1
     NODE_NO = "No node"
     NODE_SINGLE_SHORT = 'Single short'
     NODE_SINGLE_LONG = 'Single long'
     NODE_DUAL_SHORT = 'Dual short'
+    # Side of the crosspiece joint the slot opens on.
+    # "Top" is the +Z side of the joint (+Y, then +X when the joint is horizontal).
+    SLOT_SIDE_AUTO = 'Auto'
+    SLOT_SIDE_TOP = 'Top'
+    SLOT_SIDE_BOTTOM = 'Bottom'
 
     def __init__(self, **kwargs):
         super(MaterialProperties, self).__init__(**kwargs)
@@ -70,6 +75,8 @@ class MaterialProperties(ObjectProperties):
             self.node_type = self.NODE_NO
         if not hasattr(self, 'node_thickness'):
             self.node_thickness = 0.05 * self.thickness
+        if not hasattr(self, 'slot_side'):
+            self.slot_side = self.SLOT_SIDE_AUTO
         if not hasattr(self, 'link_name'):
             self.link_name = ""
 

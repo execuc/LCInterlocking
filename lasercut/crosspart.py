@@ -266,7 +266,20 @@ def retrieve_face_axis(sorted_areas_by_normals, shape):
     return x_axis, y_axis, z_axis
 
 
-def remove_intersections(first_part, second_part, referential_faces, axis, invert_y = False):
+def extend_slot(box, length, width, height, slot_height, open_up):
+    """Lengthen a slot past its open end so it runs through the part to its edge."""
+    extension = make_cross_box(length, width, slot_height, None, None)
+    if open_up:
+        extension.translate(FreeCAD.Vector(0, 0, slot_height))
+    else:
+        extension.translate(FreeCAD.Vector(0, 0, -height))
+    return box.fuse(extension)
+
+
+def remove_intersections(first_part, second_part, referential_faces, axis, invert_y = False,
+                         first_extend=0., second_extend=0.):
+    """first_extend / second_extend: how far to lengthen each slot past its open end, for parts
+    that stick out beyond the joint on that side (0 when the part ends at the joint)."""
     height = (referential_faces[0].CenterOfMass - referential_faces[1].CenterOfMass).Length / 2.0
     first_box_x = second_part.properties.thickness + second_part.properties.thickness_tolerance - second_part.properties.laser_beam_diameter + second_part.properties.hole_width_tolerance
     first_box = make_cross_box(first_box_x, first_part.properties.thickness, height,
@@ -275,12 +288,14 @@ def remove_intersections(first_part, second_part, referential_faces, axis, inver
                               first_part.properties.node_type, first_part.properties.node_thickness)
     dog_bone_radius = min(first_box_x, height) * 2. / 30.
 
+    if first_part.properties.dog_bone:
+        first_box = make_dog_bones_xz(first_box, first_box_x, first_part.properties.thickness, height,
+                                      dog_bone_radius, invert_y)
+    if first_extend > 0:
+        first_box = extend_slot(first_box, first_box_x, first_part.properties.thickness, height,
+                                first_extend, not invert_y)
     if invert_y:
-        if first_part.properties.dog_bone:
-            first_box = make_dog_bones_xz(first_box, first_box_x, first_part.properties.thickness, height, dog_bone_radius, True)
         first_box.translate(FreeCAD.Vector(0, 0, -height))
-    elif first_part.properties.dog_bone:
-        first_box = make_dog_bones_xz(first_box, first_box_x, first_part.properties.thickness, height, dog_bone_radius, False)
 
     transform_matrix = get_transformation_matrix_from_vectors(axis[0], axis[1], axis[2])
     transform(first_box, referential_faces[0], transform_matrix)
@@ -293,18 +308,53 @@ def remove_intersections(first_part, second_part, referential_faces, axis, inver
 
     dog_bone_radius = min(second_box_y, height) * 2. / 30.
 
+    if second_part.properties.dog_bone:
+        second_box = make_dog_bones_yz(second_box, second_part.properties.thickness, second_box_y, height,
+                                       dog_bone_radius, not invert_y)
+    if second_extend > 0:
+        second_box = extend_slot(second_box, second_part.properties.thickness, second_box_y, height,
+                                 second_extend, invert_y)
     if not invert_y:
-        if second_part.properties.dog_bone:
-            second_box = make_dog_bones_yz(second_box, second_part.properties.thickness, second_box_y,height, dog_bone_radius, True)
         second_box.translate(FreeCAD.Vector(0, 0, -height))
-    elif second_part.properties.dog_bone:
-        second_box = make_dog_bones_yz(second_box, second_part.properties.thickness, second_box_y, height, dog_bone_radius, False)
     transform(second_box, referential_faces[0], transform_matrix)
 
     #Part.show(first_box)
     #Part.show(second_box)
     first_part.toRemove.append(first_box)
     second_part.toRemove.append(second_box)
+
+
+def is_first_face_on_top(first_face, second_face):
+    """True if first_face is the "top" side of the joint: +Z, or +Y then +X when the joint is horizontal."""
+    direction = first_face.CenterOfMass - second_face.CenterOfMass
+    epsilon = direction.Length * 1e-6
+    for component in (direction.z, direction.y, direction.x):
+        if abs(component) > epsilon:
+            return component > 0
+    return True
+
+
+def apply_slot_side(first_part, second_part, first_face, second_face, auto_invert_y, str_parts_name):
+    """Return invert_y honoring each part's slot_side choice.
+
+    With invert_y False the first part's slot opens on first_face and the second part's on second_face.
+    """
+    first_on_top = is_first_face_on_top(first_face, second_face)
+
+    wanted = []
+    for part, slot_on_first_face_when_not_inverted in ((first_part, True), (second_part, False)):
+        side = getattr(part.properties, 'slot_side', MaterialProperties.SLOT_SIDE_AUTO)
+        if side == MaterialProperties.SLOT_SIDE_AUTO:
+            continue
+        want_first_face = (side == MaterialProperties.SLOT_SIDE_TOP) == first_on_top
+        wanted.append(want_first_face != slot_on_first_face_when_not_inverted)
+
+    if not wanted:
+        return auto_invert_y
+    if len(wanted) == 2 and wanted[0] != wanted[1]:
+        raise ValueError(str_parts_name + " : both parts ask for their slot on the same side ("
+                         + first_part.properties.slot_side + ")")
+    return wanted[0]
 
 
 #            Y
@@ -349,6 +399,8 @@ def make_cross_parts(parts):
             first_face_second_shape = is_inside(first_face, second_shape)
             second_face_second_shape = is_inside(second_face, second_shape)
             #print "first_face_first_shape: " + str(first_face_first_shape) + " second_face_first_shape:" + str(second_face_first_shape) + " first_face_second_shape: " + str(first_face_second_shape) + " second_face_second_shape:" + str(second_face_second_shape)
+            # Default orientation (used when both parts are on Auto).
+            # invert_y = False : first part slot opens on first_face, second part slot on second_face.
             if not first_face_first_shape and not second_face_first_shape \
                     and first_face_second_shape and second_face_second_shape:
                 raise ValueError(str_parts_name + " : a part is included in the other.")
@@ -357,33 +409,44 @@ def make_cross_parts(parts):
                 raise ValueError(str_parts_name + " : a part is included in the other.")
             elif not first_face_first_shape and not second_face_first_shape \
                     and not first_face_second_shape and not second_face_second_shape:
-                #print str_parts_name + " : same height parts"
-                remove_intersections(first_part, second_part, referential_faces, axis)
+                # same height parts
+                invert_y = False
             elif not first_face_first_shape and second_face_first_shape \
                     and first_face_second_shape and not second_face_second_shape:
-                #print str_parts_name + " : a part is above the other (1)"
-                remove_intersections(first_part, second_part, referential_faces, axis)
+                # a part is above the other (1)
+                invert_y = False
             elif first_face_first_shape and not second_face_first_shape \
                     and not first_face_second_shape and second_face_second_shape:
-                #print str_parts_name + " : a part is above the other (2)"
-                remove_intersections(first_part, second_part, referential_faces, axis, True)
+                # a part is above the other (2)
+                invert_y = True
             elif not first_face_first_shape and not second_face_first_shape \
                     and first_face_second_shape and not second_face_second_shape:
                 # Case where face 2 is common base and shape 2 is higher
-                remove_intersections(first_part, second_part, referential_faces, axis)
+                invert_y = False
             elif first_face_first_shape and not second_face_first_shape \
                     and not first_face_second_shape and not second_face_second_shape:
                 # Case where face 2 is common base and shape 1 is higher
-                remove_intersections(first_part, second_part, referential_faces, axis, True)
+                invert_y = True
             elif not first_face_first_shape and second_face_first_shape \
                     and not first_face_second_shape and not second_face_second_shape:
                 # Case where face 1 is common base and shape 1 is higher
-                remove_intersections(first_part, second_part, referential_faces, axis)
+                invert_y = False
             elif not first_face_first_shape and not second_face_first_shape \
                     and not first_face_second_shape and second_face_second_shape:
                 # Case where face 1 is common and shape 2 is higher
-                remove_intersections(first_part, second_part, referential_faces, axis, True)
+                invert_y = True
             else:
                 raise ValueError("Not managed")
+
+            invert_y = apply_slot_side(first_part, second_part, first_face, second_face,
+                                       invert_y, str_parts_name)
+            # A part that sticks out past the face its slot opens on needs the slot to run
+            # through to its edge, otherwise the slot would be a closed pocket.
+            first_slot_face_covered = second_face_first_shape if invert_y else first_face_first_shape
+            second_slot_face_covered = first_face_second_shape if invert_y else second_face_second_shape
+            first_extend = first_shape.BoundBox.DiagonalLength if first_slot_face_covered else 0.
+            second_extend = second_shape.BoundBox.DiagonalLength if second_slot_face_covered else 0.
+            remove_intersections(first_part, second_part, referential_faces, axis, invert_y,
+                                 first_extend, second_extend)
 
     return parts_element
