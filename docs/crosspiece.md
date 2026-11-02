@@ -19,5 +19,6 @@ Procedure
   * Crosspiece properties can be edited again clicking on "Crosspiece" group item.
   * In editing mode, parts can be visualized by selecting the treview of the tools. Then they can be displayed/hidden by tapping in the key "space".
   * Preview button allows to create a new document with crosspiece parts without exiting tool. It's convenient to adjust connection parameters.
+  * Number fields can be bound to variables from a Spreadsheet or VarSet. See [Parameters as variables](expressions.md).
 
   

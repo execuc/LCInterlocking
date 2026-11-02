@@ -49,5 +49,6 @@ Additional Information
   * Interlocking properties can be edited again clicking on "MultiJoin" group item.
   * In editing mode, parts and faces can can be visualized by selecting the in the treview of the tools. Then they can be displayed/hidden by tapping in the key "space".
   * Preview button allow to create a new document with interlocking parts without exiting tool. It's convenient to adjust connection parameters.
-  * "Add same faces" works as "Add same parts", faces while share the same connection properties. 
+  * "Add same faces" works as "Add same parts", faces while share the same connection properties.
+  * Number fields can be bound to variables from a Spreadsheet or VarSet. See [Parameters as variables](expressions.md). 
   

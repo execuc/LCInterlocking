@@ -2,6 +2,10 @@
 
 ## Release notes
 
+**Unreleased:**
+ * Crosspiece: choose which side each part's slots open on.
+ * Interlocking and Crosspiece: number fields can be bound to expressions (Spreadsheet, VarSet, formulas). See [Parameters as variables](docs/expressions.md).
+
 **v1.5.1:**
  * Remove some QWidget warnings.
  * Prevent creation of impossible living hinges.
