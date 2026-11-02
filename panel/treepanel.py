@@ -38,6 +38,7 @@ from panel import selection
 from lasercut.tabproperties import TabProperties
 from panel.treeview import TreeModel, TreeItem
 from panel.propertieslist import PropertiesList
+from lasercut.expressions import ExpressionSession
 
 
 PREVIEW_NONE = 0
@@ -61,6 +62,8 @@ class TreePanel(object):
         else:
             self.partsList = PartsList(CrossPartWidget, self.parts)
         self.tabsList = TabsList(self.faces)
+        # Expression edits are kept here until OK, so Cancel discards them.
+        self.expression_session = ExpressionSession(self.obj_join)
 
         self.params_widget = None
         if self.params_widget:
@@ -306,6 +309,7 @@ class TreePanel(object):
                 continue
             elif item.type == TreeItem.PART or item.type == TreeItem.PART_LINK :
                 part, widget = self.partsList.get(item.get_name())
+                widget.set_expression_session(self.expression_session)
                 fobj = self.active_document.getObject(part.name)
                 FreeCADGui.Selection.addSelection(fobj)
 
@@ -322,6 +326,7 @@ class TreePanel(object):
                 raise ValueError("No tab named %s", item.get_name())
             if widget is None:
                 raise ValueError("No widget named %s", item.get_name())
+            widget.set_expression_session(self.expression_session)
             fobj = self.active_document.getObject(tab.freecad_obj_name)
             FreeCADGui.Selection.addSelection(fobj, tab.face_name)
 
@@ -425,3 +430,9 @@ class TreePanel(object):
     def save_link_properties(self):
         self.partsList.get_parts_properties()
         self.tabsList.get_tabs_properties()
+
+    def commit_expressions(self):
+        items = list(self.obj_join.parts.lst)
+        if hasattr(self.obj_join, "faces"):
+            items += list(self.obj_join.faces.lst)
+        self.expression_session.commit(items, FreeCAD.Console.PrintError)

@@ -24,7 +24,11 @@
 
 from PySide import QtCore, QtGui
 from lasercut import helper
+from lasercut import expressions
 import FreeCAD
+
+EXPRESSION_HELP = ("Optional expression, e.g. Params.thickness, =2 * Params.tol or VarSet.Kerf.\n"
+                   "Leave empty to use the number on the left.")
 
 class WidgetValue(helper.ObjectProperties):
 
@@ -41,7 +45,15 @@ class ParamWidget(object):
         self.object_property = object_property
         self.widget_list = []
         self.form = None
+        self.expression_session = None
+        self.expression_kind = None
+        self.expression_key = None
         return
+
+    def set_expression_session(self, session):
+        """Let numeric fields be bound to expressions (see lasercut.expressions)."""
+        self.expression_session = session
+        self.expression_kind, self.expression_key = expressions.item_kind_key(self.object_property)
 
     def get_grid(self):
         row_index = 0
@@ -69,6 +81,8 @@ class ParamWidget(object):
             widget_config.widget.setMinimum(widget_config.interval_value[0])
             widget_config.widget.setMaximum(widget_config.interval_value[-1])
             widget_config.widget.setValue(self.get_property_value(widget_config.name))
+            if self.expression_session is not None:
+                self.create_expression_edit(widget_config)
         elif widget_config.type == bool:
             widget_config.widget = QtGui.QCheckBox("", self.form)
             state = QtCore.Qt.Checked if self.get_property_value(widget_config.name) == True else QtCore.Qt.Unchecked
@@ -93,12 +107,58 @@ class ParamWidget(object):
 
         grid.addWidget(widget_config.widget_title, row_index, 0)
         grid.addWidget(widget_config.widget, row_index, 1)
+        if self.get_expression_edit(widget_config) is not None:
+            grid.addWidget(widget_config.expression_widget, row_index, 2)
+
+    @staticmethod
+    def get_expression_edit(widget_config):
+        return getattr(widget_config, 'expression_widget', None)
+
+    def create_expression_edit(self, widget_config):
+        edit = QtGui.QLineEdit(self.form)
+        edit.setPlaceholderText("= expression")
+        edit.setText(self.expression_session.get(self.expression_kind, self.expression_key, widget_config.name))
+        widget_config.expression_widget = edit
+        widget_config.expression_value = None
+        edit.textChanged.connect(lambda text, config=widget_config: self.expression_changed(config))
+        self.expression_changed(widget_config)
+
+    def expression_changed(self, widget_config):
+        edit = widget_config.expression_widget
+        spin_box = widget_config.widget
+        text = expressions.strip_expression(edit.text())
+        widget_config.expression_value = None
+        if not text:
+            spin_box.setEnabled(True)
+            edit.setStyleSheet("")
+            edit.setToolTip(EXPRESSION_HELP)
+            return
+        try:
+            value = self.expression_session.evaluate(text, widget_config.name)
+        except ValueError as e:
+            spin_box.setEnabled(True)
+            edit.setStyleSheet("QLineEdit { color: #d32f2f; }")
+            edit.setToolTip("Invalid expression: %s" % e)
+            return
+        widget_config.expression_value = value
+        # The spin box only shows the result; the value itself isn't clamped to its range.
+        spin_box.setValue(value)
+        spin_box.setEnabled(False)
+        edit.setStyleSheet("")
+        edit.setToolTip("= %s" % ("%.6g" % value))
 
     def get_properties(self):
         for widget_config in self.widget_list:
             if widget_config.type == float and not hasattr(widget_config, 'step'):
                 continue
             elif widget_config.type == float:
+                edit = self.get_expression_edit(widget_config)
+                if edit is not None:
+                    self.expression_session.set(self.expression_kind, self.expression_key,
+                                                widget_config.name, edit.text())
+                    if widget_config.expression_value is not None:
+                        self.set_property_value(widget_config.name, widget_config.expression_value)
+                        continue
                 self.set_property_value(widget_config.name, widget_config.widget.value())
             elif widget_config.type == bool:
                 if widget_config.widget.checkState() == QtCore.Qt.Checked:
@@ -161,6 +221,8 @@ class ParamWidget(object):
 
                 widget_config.widget_title.show()
                 widget_config.widget.show()
+                if self.get_expression_edit(widget_config) is not None:
+                    widget_config.expression_widget.show()
 
                 for index in range(len(parents_list)):
                     parent = parents_list[index]
@@ -175,6 +237,8 @@ class ParamWidget(object):
                     if found is False:
                         widget_config.widget_title.hide()
                         widget_config.widget.hide()
+                        if self.get_expression_edit(widget_config) is not None:
+                            widget_config.expression_widget.hide()
                         break
 
 
