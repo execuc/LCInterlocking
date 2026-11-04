@@ -26,7 +26,7 @@
 
 Parameters live in a JSON blob (App::PropertyPythonObject), which FreeCAD's
 expression engine can't reach. For each parameter bound to an expression we
-add a hidden float property to the feature ("mirror property") and set the
+add a hidden property to the feature ("mirror property") and set the
 expression on it. FreeCAD then tracks the dependency on the spreadsheet or
 VarSet, keeps the expression up to date when aliases are renamed, and
 recomputes the feature when a referenced value changes.
@@ -46,6 +46,13 @@ KIND_TAB = "tab"
 
 # Fields that must be whole numbers once evaluated, with their minimum value.
 INTEGER_FIELDS = {"tabs_number": 1}
+
+# Fields measured in mm. Their mirror property is a distance, so the panel
+# shows "mm" and expressions such as "Params.kerf" (0.2 mm) match the unit.
+# Other fields (ratios, counts) are plain numbers.
+LENGTH_FIELDS = {"thickness", "thickness_tolerance", "hole_width_tolerance", "laser_beam_diameter",
+                 "node_thickness", "tabs_width", "tabs_shift", "screw_diameter", "screw_length",
+                 "screw_length_tol"}
 
 _SEPARATOR = "__"
 
@@ -138,12 +145,24 @@ def set_expression(fp, kind, key, field, expr):
         _remove_property(fp, name)
         return
     value = evaluate(fp, expr, field)
-    if not hasattr(fp, name):
-        fp.addProperty("App::PropertyFloat", name, GROUP,
-                       "Expression for %s of %s" % (field, key), 0, False, True)
+    ensure_property(fp, kind, key, field)
     if _engine(fp).get(name) != expr:
         fp.setExpression(name, expr)
     setattr(fp, name, value)
+
+
+def ensure_property(fp, kind, key, field):
+    """Create the mirror property if needed and return (name, created)."""
+    name = property_name(kind, key, field)
+    if hasattr(fp, name):
+        return name, False
+    prop_type = "App::PropertyDistance" if field in LENGTH_FIELDS else "App::PropertyFloat"
+    fp.addProperty(prop_type, name, GROUP, "Expression for %s of %s" % (field, key), 0, False, True)
+    return name, True
+
+
+def mirror_properties(fp):
+    return [name for name in fp.PropertiesList if _split_property_name(name) is not None]
 
 
 def _remove_property(fp, name):
@@ -201,33 +220,45 @@ def apply_values(fp, items, report_error=None):
 
 
 class ExpressionSession(object):
-    """Expression edits made in a task panel, applied only on OK."""
+    """Tracks expression changes made while a task panel is open.
+
+    The panel binds its spin boxes to the mirror properties, and FreeCAD's
+    expression editor (the f(x) button) writes to them immediately. So the
+    session remembers the expressions present when the panel opened, puts
+    them back on Cancel, and removes the mirror properties that ended up
+    without an expression when the panel closes.
+    """
 
     def __init__(self, fp):
         self.fp = fp
-        self.pending = {}
+        engine = _engine(fp)
+        self.original = dict((name, engine[name]) for name in mirror_properties(fp) if name in engine)
 
-    def get(self, kind, key, field):
-        if (kind, key, field) in self.pending:
-            return self.pending[(kind, key, field)]
-        return get_expression(self.fp, kind, key, field) or ""
+    def ensure_property(self, kind, key, field):
+        return ensure_property(self.fp, kind, key, field)[0]
 
-    def set(self, kind, key, field, expr):
-        expr = strip_expression(expr)
-        if expr == (get_expression(self.fp, kind, key, field) or ""):
-            self.pending.pop((kind, key, field), None)
-        else:
-            self.pending[(kind, key, field)] = expr
+    def get_expression(self, name):
+        return _engine(self.fp).get(name)
 
     def evaluate(self, expr, field=None):
         return evaluate(self.fp, expr, field)
 
-    def commit(self, items, report_error=None):
-        for (kind, key, field), expr in sorted(self.pending.items()):
-            try:
-                set_expression(self.fp, kind, key, field, expr)
-            except ValueError as e:
-                if report_error is not None:
-                    report_error("%s: expression for %s '%s' not saved: %s\n" % (key, field, expr, e))
-        self.pending = {}
+    def _remove_unbound(self):
+        engine = _engine(self.fp)
+        for name in mirror_properties(self.fp):
+            if name not in engine:
+                self.fp.removeProperty(name)
+
+    def commit(self, items):
+        """OK: keep the expressions, drop unused and stale mirror properties."""
+        self._remove_unbound()
         remove_stale(self.fp, items)
+
+    def rollback(self):
+        """Cancel: restore the expressions present when the panel opened."""
+        engine = _engine(self.fp)
+        for name in mirror_properties(self.fp):
+            original = self.original.get(name)
+            if engine.get(name) != original:
+                self.fp.setExpression(name, original)
+        self._remove_unbound()

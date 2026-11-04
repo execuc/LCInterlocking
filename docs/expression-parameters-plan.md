@@ -6,7 +6,8 @@
 
 **Changes from the original plan:**
 - The feature's ExpressionEngine is the only record of expressions; nothing is added to the JSON blob. FreeCAD rewrites expressions when an alias is renamed, so a copy in the blob would go stale.
-- The panel uses a plain expression field next to each spinbox instead of FreeCAD's `ExpressionBinding`, which needs the property to exist before the dialog opens. Edits are held in an `ExpressionSession` until OK, so Cancel needs no document transaction.
+- First version used a plain text box next to each spinbox. After testing, it was replaced by FreeCAD's `Gui::QuantitySpinBox` + `FreeCADGui.ExpressionBinding` (the standard f(x) button), as in FreeCAD's FEM task panels. The binding needs the property to exist, so mirror properties are created when a field is shown, and the ones left without an expression are removed on OK or Cancel. The expression editor writes to the object immediately, so `ExpressionSession` snapshots the expressions when the panel opens and restores them on Cancel.
+- Length fields use `App::PropertyDistance` mirror properties and the `mm` unit on the spin box, so quantities like `0.2 mm` match. They display in the user's unit schema.
 - Expressions are evaluated with `evalExpression` when values are applied, so they work right after OK without waiting for a recompute. `setExpression` silently accepts broken expressions, so each is checked before saving.
 
 **Branch:** `expression-parameters`, created from `crosspiece-slot-side` so it includes the per-part slot side work (`slot_side` on `MaterialProperties`, the "Slot side" field in `CrossPartWidget`). The new crosspiece fields must keep working alongside the expression support.

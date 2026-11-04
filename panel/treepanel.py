@@ -62,7 +62,7 @@ class TreePanel(object):
         else:
             self.partsList = PartsList(CrossPartWidget, self.parts)
         self.tabsList = TabsList(self.faces)
-        # Expression edits are kept here until OK, so Cancel discards them.
+        # Remembers the expressions present now, so Cancel can put them back.
         self.expression_session = ExpressionSession(self.obj_join)
 
         self.params_widget = None
@@ -435,4 +435,7 @@ class TreePanel(object):
         items = list(self.obj_join.parts.lst)
         if hasattr(self.obj_join, "faces"):
             items += list(self.obj_join.faces.lst)
-        self.expression_session.commit(items, FreeCAD.Console.PrintError)
+        self.expression_session.commit(items)
+
+    def rollback_expressions(self):
+        self.expression_session.rollback()

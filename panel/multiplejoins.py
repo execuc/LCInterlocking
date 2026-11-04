@@ -254,6 +254,7 @@ class MultipleJoins(TreePanel):
         return True
 
     def reject(self):
+        self.rollback_expressions()
         self.obj_join.parts = self.parts_origin
         self.obj_join.faces = self.faces_origin
         self.obj_join.edit = False
