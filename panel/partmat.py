@@ -53,7 +53,14 @@ class CrossPartWidget(Part):
 
     def __init__(self, cad_object):
         Part.__init__(self, cad_object)
-        self.widget_list.extend([WidgetValue(type=list, name="node_type", show_name="Node type", widget=None,
+        # Parts saved before slot_side existed don't have the attribute
+        if not hasattr(cad_object, 'slot_side'):
+            cad_object.slot_side = MaterialProperties.SLOT_SIDE_AUTO
+        self.widget_list.extend([WidgetValue(type=list, name="slot_side", show_name="Slot side", widget=None,
+                                             interval_value=[MaterialProperties.SLOT_SIDE_AUTO,
+                                                             MaterialProperties.SLOT_SIDE_TOP,
+                                                             MaterialProperties.SLOT_SIDE_BOTTOM]),
+                                 WidgetValue(type=list, name="node_type", show_name="Node type", widget=None,
                                              interval_value=[MaterialProperties.NODE_NO,
                                                              MaterialProperties.NODE_SINGLE_SHORT,
                                                              MaterialProperties.NODE_SINGLE_LONG,

@@ -29,6 +29,7 @@ import os
 from lasercut.crosspart import make_cross_parts
 from panel.treepanel import TreePanel, PREVIEW_NONE, PREVIEW_NORMAL, PREVIEW_FAST
 from panel.propertieslist import PropertiesList
+from lasercut import expressions
 import json
 import copy
 from PySide import QtCore, QtGui
@@ -50,7 +51,8 @@ class CrossPieceGroup:
 
     def onChanged(self, fp, prop):
         if prop == "need_recompute":
-            self.execute(fp)
+            if fp.need_recompute:
+                self.execute(fp)
         elif prop == "preview":
             self.preview(fp)
         elif prop == "edit":
@@ -106,58 +108,74 @@ class CrossPieceGroup:
 
 
     def execute(self, fp):
+        items = fp.parts.lst
         if fp.need_recompute:
+            # OK pressed in the task panel
             fp.need_recompute = False
+            expressions.apply_values(fp, items, FreeCAD.Console.PrintError)
+            self.rebuild(fp)
+        elif expressions.apply_values(fp, items, FreeCAD.Console.PrintError):
+            # A spreadsheet or VarSet value used by an expression changed.
+            # We are inside a document recompute: only refresh the shapes.
+            self.update_generated_parts(fp, self.compute_parts(fp))
 
-            document = fp.Document
-            if len(fp.fromParts) > 0:
-                groupObj = fp.fromParts[0]
+    def compute_parts(self, fp):
+        document = fp.Document
+        parts = []
+        for part in fp.parts.lst:
+            cp_part = copy.deepcopy(part)
+            cp_part.recomputeInit(document.getObject(cp_part.name))
+            parts.append(cp_part)
+
+        return make_cross_parts(parts)
+
+    def rebuild(self, fp):
+        document = fp.Document
+        if len(fp.fromParts) > 0:
+            groupObj = fp.fromParts[0]
+        else:
+            groupObj = document.addObject("App::DocumentObjectGroup", str(fp.Name) + "_origin_parts")
+
+        subObjectList = groupObj.Group
+        for subObj in subObjectList:
+            groupObj.removeObject(subObj)
+
+        fp.fromParts = []
+        freedac_origin_obj = [groupObj]
+        for part in fp.parts.lst:
+            freecad_obj = document.getObject(part.name)
+            freedac_origin_obj.append(freecad_obj)
+            groupObj.addObject(freecad_obj)
+        fp.fromParts = freedac_origin_obj
+
+        self.update_generated_parts(fp, self.compute_parts(fp))
+        fp.edit = False
+
+        FreeCADGui.getDocument(document.Name).ActiveView.fitAll()
+        document.recompute()
+
+    def update_generated_parts(self, fp, computed_parts):
+        document = fp.Document
+        previous_nameMapping = copy.copy(fp.namesMapping)
+        fp.namesMapping.clear()
+
+        freecad_obj_generated = []
+        freecad_objname_tokeep = []
+        for part in computed_parts:
+            if part.get_new_name() in previous_nameMapping:
+                freecad_obj = document.getObject(previous_nameMapping[part.get_new_name()])
             else:
-                groupObj = document.addObject("App::DocumentObjectGroup", str(fp.Name) + "_origin_parts")
+                freecad_obj = document.addObject("Part::Feature", part.get_new_name())
+            fp.namesMapping[part.get_new_name()] = freecad_obj.Name
+            freecad_obj.Shape = part.get_shape()
+            freecad_objname_tokeep.append(freecad_obj.Name)
+            freecad_obj_generated.append(freecad_obj)
 
-            subObjectList = groupObj.Group
-            for subObj in subObjectList:
-                groupObj.removeObject(subObj)
+        for part in fp.generatedParts:
+            if part.Name not in freecad_objname_tokeep:
+                document.removeObject(part.Name)
 
-            fp.fromParts = []
-            parts = []
-            freedac_origin_obj = []
-            freedac_origin_obj.append(groupObj)
-            for part in fp.parts.lst:
-                cp_part = copy.deepcopy(part)
-                freecad_obj = document.getObject(cp_part.name)
-                freedac_origin_obj.append(freecad_obj)
-                cp_part.recomputeInit(freecad_obj)
-                groupObj.addObject(freecad_obj)
-                parts.append(cp_part)
-
-            fp.fromParts = freedac_origin_obj
-            computed_parts = make_cross_parts(parts)
-
-            previous_nameMapping = copy.copy(fp.namesMapping)
-            fp.namesMapping.clear()
-
-            freecad_obj_generated = []
-            freecad_objname_tokeep = []
-            for part in computed_parts:
-                if part.get_new_name() in previous_nameMapping:
-                    freecad_obj = document.getObject(previous_nameMapping[part.get_new_name()])
-                else:
-                    freecad_obj = document.addObject("Part::Feature", part.get_new_name())
-                fp.namesMapping[part.get_new_name()] = freecad_obj.Name
-                freecad_obj.Shape = part.get_shape()
-                freecad_objname_tokeep.append(freecad_obj.Name)
-                freecad_obj_generated.append(freecad_obj)
-
-            for part in fp.generatedParts:
-                if part.Name not in freecad_objname_tokeep:
-                    document.removeObject(part.Name)
-
-            fp.generatedParts = freecad_obj_generated
-            fp.edit = False
-
-            FreeCADGui.getDocument(document.Name).ActiveView.fitAll()
-            document.recompute()
+        fp.generatedParts = freecad_obj_generated
 
 
 class CrossPieceViewProvider:
@@ -217,6 +235,7 @@ class CrossPiece(TreePanel):
         return True
 
     def reject(self):
+        self.rollback_expressions()
         self.obj_join.parts = self.parts_origin
         self.obj_join.edit = False
         FreeCADGui.ActiveDocument.resetEdit()
@@ -226,6 +245,7 @@ class CrossPiece(TreePanel):
         self.save_items_properties()
         self.save_link_properties()
         if not preview:
+            self.commit_expressions()
             self.obj_join.need_recompute = True
         else:
             self.obj_join.preview = PREVIEW_NORMAL

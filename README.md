@@ -24,6 +24,26 @@ This panel appears when "Laser cut Interlocking" workbench is selected:
  * ![Illustration](docs/imgs/living_hinges.png) [Create bend surface with living hinges.](docs/living_hinges.md)
  * ![Illustration](docs/imgs/export.png) [Project parts to 2D plan in order to export in SVG format.](docs/export.md) (Export tool)
 
+## Fit and tolerances
+
+The tolerance settings make the slots slightly bigger than the tabs, so parts slide together instead of jamming. Picture a tab on one board pushing through a rectangular slot in another board. The slot has a short side and a long side, and each tolerance widens one of them:
+
+ * **Thickness tolerance** widens the **short side** of the slot, which has to fit the other board's thickness.
+   * Plywood sold as 3 mm is often really 3.2 mm, so a slot cut at exactly 3 mm won't fit. A thickness tolerance of 0.2 mm fixes that.
+   * The value comes from the board that has the **tab**: it says "this material may be thicker than stated".
+   * The default is 10% of the thickness.
+ * **Slot width tolerance** lengthens the **long side** of the slot, along the tab's width.
+   * A 20 mm tab with 0.1 mm here goes into a 20.1 mm slot, so it doesn't bind at the ends.
+   * The value comes from the board that has the **slot**.
+   * The default is 0, so tabs fit exactly lengthwise.
+ * **Laser beam diameter** works the other way. The laser burns away a thin line, which makes holes come out slightly bigger than drawn, so the slots are shrunk by this amount to compensate.
+
+**Crosspiece:** there are no tabs. Two boards each get a slot and lock together in an X, so each slot only has to fit the other board's thickness. Both tolerances widen that one dimension: thickness tolerance comes from the other board, and slot width tolerance from this board.
+
+**Tuning:** if parts are too tight, raise the matching tolerance. If they are loose or wobbly, lower it, or raise the laser beam diameter. The right values depend on your material and your laser, so cut a small test joint first.
+
+These values, and the other number fields of the Interlocking and Crosspiece tools, can be [bound to variables](docs/expressions.md), for example a Spreadsheet shared by all parts.
+
 ## Installation
 
 ### Recommended Install

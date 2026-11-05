@@ -24,7 +24,11 @@
 
 from PySide import QtCore, QtGui
 from lasercut import helper
+from lasercut import expressions
 import FreeCAD
+
+EXPRESSION_HELP = ("Click f(x) or type = to use an expression,\n"
+                   "e.g. Params.thickness, 2 * Params.tol or VarSet.Kerf.")
 
 class WidgetValue(helper.ObjectProperties):
 
@@ -41,7 +45,15 @@ class ParamWidget(object):
         self.object_property = object_property
         self.widget_list = []
         self.form = None
+        self.expression_session = None
+        self.expression_kind = None
+        self.expression_key = None
         return
+
+    def set_expression_session(self, session):
+        """Let numeric fields be bound to expressions (see lasercut.expressions)."""
+        self.expression_session = session
+        self.expression_kind, self.expression_key = expressions.item_kind_key(self.object_property)
 
     def get_grid(self):
         row_index = 0
@@ -62,6 +74,8 @@ class ParamWidget(object):
         if widget_config.type == float and not hasattr(widget_config, 'step'):
             widget_config.widget = QtGui.QLabel(self.form)
             widget_config.widget.setText("%f" % self.get_property_value(widget_config.name))
+        elif widget_config.type == float and self.expression_session is not None:
+            self.create_expression_spin_box(widget_config)
         elif widget_config.type == float:
             widget_config.widget = QtGui.QDoubleSpinBox(self.form)
             widget_config.widget.setDecimals(widget_config.decimals)
@@ -94,10 +108,56 @@ class ParamWidget(object):
         grid.addWidget(widget_config.widget_title, row_index, 0)
         grid.addWidget(widget_config.widget, row_index, 1)
 
+    @staticmethod
+    def is_expression_bound(widget_config):
+        return getattr(widget_config, 'expression_property', None) is not None
+
+    def create_expression_spin_box(self, widget_config):
+        """FreeCAD's QuantitySpinBox, bound to a mirror property so it gets the f(x) button."""
+        import FreeCADGui
+        session = self.expression_session
+        name = widget_config.name
+        prop = session.ensure_property(self.expression_kind, self.expression_key, name)
+        spin_box = FreeCADGui.UiLoader().createWidget("Gui::QuantitySpinBox")
+        spin_box.setParent(self.form)
+        if name in expressions.LENGTH_FIELDS:
+            spin_box.setProperty("unit", "mm")
+        # Decimals follow FreeCAD's unit preferences; QuantitySpinBox has no decimals setting.
+        spin_box.setProperty("singleStep", widget_config.step)
+        spin_box.setProperty("minimum", float(widget_config.interval_value[0]))
+        spin_box.setProperty("maximum", float(widget_config.interval_value[-1]))
+        spin_box.setToolTip(EXPRESSION_HELP)
+        FreeCADGui.ExpressionBinding(spin_box).bind(session.fp, prop)
+        widget_config.widget = spin_box
+        widget_config.expression_property = prop
+        value = self.evaluate_bound_field(widget_config)
+        if value is None:
+            value = self.get_property_value(name)
+        spin_box.setProperty("rawValue", float(value))
+
+    def evaluate_bound_field(self, widget_config):
+        """Result of the field's expression, or None when it has no (valid) expression."""
+        expr = self.expression_session.get_expression(widget_config.expression_property)
+        if not expr:
+            return None
+        try:
+            return self.expression_session.evaluate(expr, widget_config.name)
+        except ValueError as e:
+            FreeCAD.Console.PrintError("%s: expression for %s '%s' failed: %s\n"
+                                       % (self.expression_key, widget_config.show_name, expr, e))
+            return None
+
     def get_properties(self):
         for widget_config in self.widget_list:
             if widget_config.type == float and not hasattr(widget_config, 'step'):
                 continue
+            elif widget_config.type == float and self.is_expression_bound(widget_config):
+                # Evaluated here rather than read from the spin box, so a value
+                # outside the spin box range isn't clamped.
+                value = self.evaluate_bound_field(widget_config)
+                if value is None:
+                    value = widget_config.widget.property("rawValue")
+                self.set_property_value(widget_config.name, value)
             elif widget_config.type == float:
                 self.set_property_value(widget_config.name, widget_config.widget.value())
             elif widget_config.type == bool:
